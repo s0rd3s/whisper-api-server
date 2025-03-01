@@ -63,63 +63,25 @@ class FakeFile:
     def name(self):
         return self.filename
 
-class Routes:
-    """Класс для регистрации всех эндпоинтов API.
-
-    Этот класс содержит все маршруты (endpoints) для взаимодействия с сервером транскрибации.
-    Он предоставляет функциональность для получения списка доступных моделей, информации о конкретной модели,
-    а также для транскрибации аудиофайлов, загруженных различными способами.
-
-    Эндпоинты:
-    - GET /v1/models:
-        Возвращает JSON-список доступных моделей для транскрибации. Каждая модель содержит информацию об ID,
-        типе объекта, владельце и разрешениях.
-
-    - GET /v1/models/<model_id>:
-        Возвращает JSON-объект с информацией о конкретной модели, идентифицированной по <model_id>.
-        Если модель не найдена, возвращает ошибку 404.
-
-    - POST /v1/audio/transcriptions:
-        Транскрибирует аудиофайл, загруженный через форму. Ожидает, что файл будет передан в поле 'file'
-        multipart формы. Возвращает JSON с транскрибированным текстом и временем обработки.
-        Поддерживает параметры language, temperature и prompt, передаваемые также через форму.
-
-    - POST /v1/audio/transcriptions/url:
-        Транскрибирует аудиофайл, доступный по указанному URL. Ожидает JSON-запрос с полем 'url',
-        содержащим URL аудиофайла. Возвращает JSON с транскрибированным текстом и временем обработки.
-
-    - POST /v1/audio/transcriptions/base64:
-        Транскрибирует аудиофайл, закодированный в base64. Ожидает JSON-запрос с полем 'file',
-        содержащим base64-encoded представление аудиофайла. Возвращает JSON с транскрибированным текстом
-        и временем обработки.
-
-    - POST /v1/audio/transcriptions/multipart:
-        Аналогичен /v1/audio/transcriptions, но явно указывает на то, что файл ожидается в multipart форме.
-        Используется для транскрибации аудиофайла, загруженного через multipart-форму.
-        Возвращает JSON с транскрибированным текстом и временем обработки.
-        Поддерживает параметры language, temperature и prompt, передаваемые также через форму.
+class AudioFileProcessor:
     """
-
-    def __init__(self, app, transcriber, config: Dict):
+    Класс для обработки аудиофайлов, включая проверку размера, сохранение во временный файл и транскрибацию.
+    """
+    def __init__(self, transcriber, config: Dict):
         """
-        Инициализация маршрутов.
+        Инициализация AudioFileProcessor.
 
         Args:
-            app: Flask-приложение.
             transcriber: Экземпляр транскрайбера.
             config: Словарь с конфигурацией.
         """
-        self.app = app
         self.transcriber = transcriber
         self.config = config
         self.max_file_size_mb = self.config.get("max_file_size", 100)  # Default 100MB
 
-        # Регистрация маршрутов
-        self._register_routes()
-
-    def _process_audio_file(self, file, request_form=None):
+    def process_audio_file(self, file, request_form=None):
         """
-        Общая функция для обработки аудиофайла.
+        Обрабатывает аудиофайл: проверяет размер, сохраняет во временный файл и транскрибирует.
 
         Args:
             file: Объект файла, полученный из запроса.
@@ -173,6 +135,59 @@ class Routes:
             os.remove(temp_file_path)
             os.rmdir(temp_dir)
 
+class Routes:
+    """Класс для регистрации всех эндпоинтов API.
+
+    Этот класс содержит все маршруты (endpoints) для взаимодействия с сервером транскрибации.
+    Он предоставляет функциональность для получения списка доступных моделей, информации о конкретной модели,
+    а также для транскрибации аудиофайлов, загруженных различными способами.
+
+    Эндпоинты:
+    - GET /v1/models:
+        Возвращает JSON-список доступных моделей для транскрибации. Каждая модель содержит информацию об ID,
+        типе объекта, владельце и разрешениях.
+
+    - GET /v1/models/<model_id>:
+        Возвращает JSON-объект с информацией о конкретной модели, идентифицированной по <model_id>.
+        Если модель не найдена, возвращает ошибку 404.
+
+    - POST /v1/audio/transcriptions:
+        Транскрибирует аудиофайл, загруженный через форму. Ожидает, что файл будет передан в поле 'file'
+        multipart формы. Возвращает JSON с транскрибированным текстом и временем обработки.
+        Поддерживает параметры language, temperature и prompt, передаваемые также через форму.
+
+    - POST /v1/audio/transcriptions/url:
+        Транскрибирует аудиофайл, доступный по указанному URL. Ожидает JSON-запрос с полем 'url',
+        содержащим URL аудиофайла. Возвращает JSON с транскрибированным текстом и временем обработки.
+
+    - POST /v1/audio/transcriptions/base64:
+        Транскрибирует аудиофайл, закодированный в base64. Ожидает JSON-запрос с полем 'file',
+        содержащим base64-encoded представление аудиофайла. Возвращает JSON с транскрибированным текстом
+        и временем обработки.
+
+    - POST /v1/audio/transcriptions/multipart:
+        Аналогичен /v1/audio/transcriptions, но явно указывает на то, что файл ожидается в multipart форме.
+        Используется для транскрибации аудиофайла, загруженного через multipart-форму.
+        Возвращает JSON с транскрибированным текстом и временем обработки.
+        Поддерживает параметры language, temperature и prompt, передаваемые также через форму.
+    """
+
+    def __init__(self, app, transcriber, config: Dict):
+        """
+        Инициализация маршрутов.
+
+        Args:
+            app: Flask-приложение.
+            transcriber: Экземпляр транскрайбера.
+            config: Словарь с конфигурацией.
+        """
+        self.app = app
+        self.config = config
+        self.audio_processor = AudioFileProcessor(transcriber, config)
+
+        # Регистрация маршрутов
+        self._register_routes()
+
     def _register_routes(self):
         """Регистрация всех эндпоинтов."""
 
@@ -201,7 +216,7 @@ class Routes:
                 with open(file_path, 'rb') as f:
                     # Создаем объект файла, совместимый с обработчиком
                     fake_file = FakeFile(f, os.path.basename(file_path))
-                    return self._process_audio_file(fake_file)
+                    return self.audio_processor.process_audio_file(fake_file)
 
             except Exception as e:
                 logger.error(f"Ошибка локальной транскрибации: {e}")
@@ -248,7 +263,7 @@ class Routes:
                 return jsonify({"error": "No file part"}), 400
 
             file = request.files['file']
-            return self._process_audio_file(file, request.form)
+            return self.audio_processor.process_audio_file(file, request.form)
 
         @self.app.route('/v1/audio/transcriptions/url', methods=['POST'])
         def transcribe_from_url():
@@ -279,7 +294,7 @@ class Routes:
                 with open(temp_file_path, 'rb') as file:
                     # Создаем объект файла, как будто он пришел из request.files
                     fake_file = FakeFile(file, os.path.basename(temp_file_path))
-                    result = self._process_audio_file(fake_file)
+                    result = self.audio_processor.process_audio_file(fake_file)
 
                 return result
 
@@ -324,7 +339,7 @@ class Routes:
                 with open(temp_file_path, 'rb') as file:
                     # Создаем объект файла, как будто он пришел из request.files
                     fake_file = FakeFile(file, os.path.basename(temp_file_path))
-                    result = self._process_audio_file(fake_file)
+                    result = self.audio_processor.process_audio_file(fake_file)
 
                 return result
 
@@ -349,4 +364,4 @@ class Routes:
                 return jsonify({"error": "No file part"}), 400
 
             file = request.files['file']
-            return self._process_audio_file(file, request.form)
+            return self.audio_processor.process_audio_file(file, request.form)

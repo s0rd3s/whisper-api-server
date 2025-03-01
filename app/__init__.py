@@ -32,7 +32,6 @@ class WhisperServiceAPI:
 
         # Регистрация маршрутов
         Routes(self.app, self.transcriber, self.config)
-        # self._register_routes()
 
         logger.info(f"API сервис инициализирован, порт: {self.port}")
     
