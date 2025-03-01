@@ -2,20 +2,26 @@
 
 ## Overview
 
-This project is a local API server compatible with OpenAI's API for transcribing audio to text using the Whisper model. It's designed to run as a system service, loading the Whisper model into memory at startup and handling transcription requests via REST API.
+This project is a lightweight, OpenAI-compatible API server for transcribing audio to text using the Whisper model. It's designed to run locally, making it easy to set up and use for speech-to-text tasks.
 
 ## Features
 
-- **Audio Transcription**: Supports various input methods:
-  - Local server files
+- **OpenAI API Compatibility**: Fully compatible with OpenAI's `/v1/audio/transcriptions` and `/v1/models` endpoints.
+- **Local File Support**: Transcribe audio files stored locally on your machine.
+- **Multiple Input Methods**: Supports:
+  - Local file paths
   - Files accessible via URL
-  - Base64-encoded files
-  - Multipart form data
-- **OpenAI API Compatibility**: Works with `/v1/audio/transcriptions` and `/v1/models` endpoints.
-- **Audio Preprocessing**: Converts audio to WAV, normalizes, and adds silence.
-- **Hardware Support**: Utilizes GPU (CUDA, MPS) or CPU.
-- **Logging**: Tracks all operations.
-- **Health Check**: Includes a health check endpoint.
+  - Base64-encoded audio
+  - Multipart form uploads
+- **Easy Setup**: Designed to run as a local service with minimal configuration.
+- **Hardware Optimization**: Utilizes GPU (CUDA, MPS) or CPU for efficient processing.
+- **Health Check**: Includes a `/health` endpoint for service monitoring.
+
+## Recommended Model
+
+For Russian language transcription, we recommend using the [**whisper-large-v3-russian**](https://huggingface.co/antony66/whisper-large-v3-russian) model from Hugging Face. This model is fine-tuned specifically for Russian speech recognition and delivers high accuracy.
+
+Perfect for local development or offline use cases where OpenAI's API isn't accessible.
 
 ## Quick Start
 
