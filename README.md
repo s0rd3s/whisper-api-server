@@ -56,7 +56,7 @@ Perfect for local development or offline use cases where OpenAI's API isn't acce
    - Once the server is running, you can send transcription requests.
    - Example request (curl):
    ```bash
-   curl -X POST -F file=@audio.wav http://localhost:5042/v1/audio/transcriptions
+   curl -X POST -F file=@audio.mp3 http://localhost:5042/v1/audio/transcriptions | jq -r '.text'
    ```
 
 Enjoy seamless audio-to-text transcription with your local Whisper API server!
