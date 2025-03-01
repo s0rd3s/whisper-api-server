@@ -1,4 +1,3 @@
-import logging
 import time
 from typing import Dict, Tuple
 
@@ -11,7 +10,7 @@ from transformers import (
     pipeline,
 )
 
-from .audio import AudioProcessor
+from .audio_processor import AudioProcessor
 from .logger import logger
 
 class WhisperTranscriber:
