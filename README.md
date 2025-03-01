@@ -19,7 +19,7 @@ This project is a lightweight, OpenAI-compatible API server for transcribing aud
 
 ## Recommended Model
 
-For Russian language transcription, we recommend using the [**whisper-large-v3-russian**](https://huggingface.co/antony66/whisper-large-v3-russian) model from Hugging Face. This model is fine-tuned specifically for Russian speech recognition and delivers high accuracy.
+For Russian language transcription, we recommend using the [**whisper-large-v3-russian**](https://huggingface.co/antony66/whisper-large-v3-russian) model from Hugging Face. This model is fine-tuned specifically for Russian speech recognition and delivers high accuracy. For faster transcription with slightly lower accuracy, consider the [**whisper-large-v3-turbo-russian**](https://huggingface.co/dvislobokov/whisper-large-v3-turbo-russian) model, which is optimized for speed.
 
 Perfect for local development or offline use cases where OpenAI's API isn't accessible.
 

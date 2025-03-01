@@ -1,4 +1,3 @@
-# routes.py
 import os
 import uuid
 import tempfile
@@ -7,9 +6,8 @@ import requests
 import time
 from flask import request, jsonify
 from typing import Dict
-import logging
 
-logger = logging.getLogger("routes")
+from .logger import logger
 
 class FakeFile:
     """Имитирует файловый объект для унификации обработки из разных источников.
