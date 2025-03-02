@@ -1,6 +1,6 @@
 {
     "service_port": 5042,
-    "model_path": "/mnt/cloud/llm/tools/whisper-large-v3-russian",
+    "model_path": "/mnt/cloud/llm/whisper/whisper-large-v3-russian",
     "language": "russian",
     "chunk_length_s": 30,
     "batch_size": 16,
