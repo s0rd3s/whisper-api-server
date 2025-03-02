@@ -160,6 +160,10 @@ You can use any Whisper model by changing the `model_path` in the configuration:
 2. Update the `model_path` in `config.json`
 3. Restart the service
 
+#### Recommended Models
+
+For Russian language transcription, we recommend using the [**whisper-large-v3-russian**](https://huggingface.co/antony66/whisper-large-v3-russian) model from Hugging Face. This model is fine-tuned specifically for Russian speech recognition and delivers high accuracy. For faster transcription with slightly lower accuracy, consider the [**whisper-large-v3-turbo-russian**](https://huggingface.co/dvislobokov/whisper-large-v3-turbo-russian) model, which is optimized for speed.
+
 ### Hardware Acceleration
 
 The service automatically selects the best available compute device:
@@ -184,10 +188,6 @@ For slow transcription:
 - Use a GPU if available
 - Adjust `chunk_length_s` and `batch_size` parameters
 - Consider using a smaller Whisper model
-
-## License
-
-[MIT License](LICENSE)
 
 ## Acknowledgements
 
