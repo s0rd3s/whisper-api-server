@@ -29,7 +29,7 @@ class FakeFile:
     Пример использования:
     >>> with open('audio.wav', 'rb') as f:
     >>>     fake = FakeFile(f, 'audio.wav')
-    >>>     fake.save('/tmp/copy.wav')  # Новый метод сохранения
+    >>>     fake.save('/tmp/copy.wav')
     >>>     processor.handle_file(fake)
     """
     def __init__(self, file, filename):
@@ -123,7 +123,8 @@ class AudioFileProcessor:
             return jsonify({
                 "text": text,
                 "processing_time": processing_time,
-                "response_size_bytes": len(text.encode('utf-8'))
+                "response_size_bytes": len(text.encode('utf-8')),
+                "model": os.path.basename(self.config["model_path"])
             }), 200
 
         except Exception as e:
