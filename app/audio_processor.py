@@ -12,7 +12,7 @@ import uuid
 from typing import Dict, Tuple
 
 # Импорт классов и функций из других модулей
-from .logger import logger
+from .utils import logger
 
 class AudioProcessor:
     """Класс для предобработки аудиофайлов перед распознаванием."""

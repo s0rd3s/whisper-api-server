@@ -6,7 +6,7 @@ import waitress
 # Импорт классов и функций из других модулей
 from .transcriber import WhisperTranscriber
 from .routes import Routes
-from .logger import logger
+from .utils import logger
 
 class WhisperServiceAPI:
     """Класс для API сервиса распознавания речи."""

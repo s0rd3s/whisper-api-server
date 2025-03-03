@@ -7,7 +7,7 @@ OpenAI для транскрибации аудиофайлов в текст. �
 """
 
 import time
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 import librosa
 import numpy as np
@@ -19,7 +19,7 @@ from transformers import (
 )
 
 from .audio_processor import AudioProcessor
-from .logger import logger
+from .utils import logger
 
 class WhisperTranscriber:
     """Класс для распознавания речи с помощью модели Whisper."""
@@ -135,7 +135,7 @@ class WhisperTranscriber:
             logger.error(f"Ошибка при загрузке аудио {file_path}: {e}")
             raise
 
-    def transcribe(self, audio_path: str) -> str:
+    def transcribe(self, audio_path: str) -> Union[str, Dict]:
         """
         Транскрибация аудиофайла.
         
@@ -143,7 +143,9 @@ class WhisperTranscriber:
             audio_path: Путь к обработанному аудиофайлу.
 
         Returns:
-            Распознанный текст.
+            В зависимости от параметра return_timestamps:
+            - Если return_timestamps=False: строка с распознанным текстом
+            - Если return_timestamps=True: словарь с ключами "segments" (список словарей с ключами start_time_ms, end_time_ms, text) и "text" (полный текст)
         """
         logger.info(f"Начало транскрибации файла: {audio_path}")
 
@@ -157,12 +159,52 @@ class WhisperTranscriber:
             return_timestamps=self.return_timestamps
         )
 
-        transcribed_text = result.get("text", "")
-        logger.info(f"Транскрибация завершена: получено {len(transcribed_text)} символов текста")
+        # Если временные метки не запрошены, возвращаем только текст
+        if not self.return_timestamps:
+            transcribed_text = result.get("text", "")
+            logger.info(f"Транскрибация завершена: получено {len(transcribed_text)} символов текста")
+            return transcribed_text
+        
+        # Если временные метки запрошены, обрабатываем и форматируем результат
+        segments = []
+        full_text = result.get("text", "")
+        
+        if "chunks" in result:
+            # Для новых версий модели Whisper
+            for chunk in result["chunks"]:
+                start_time = chunk.get("timestamp", [0, 0])[0]
+                end_time = chunk.get("timestamp", [0, 0])[1]
+                text = chunk.get("text", "").strip()
+                
+                segments.append({
+                    "start_time_ms": int(start_time * 1000),
+                    "end_time_ms": int(end_time * 1000),
+                    "text": text
+                })
+        elif hasattr(result, "get") and "segments" in result:
+            # Для старых версий модели Whisper
+            for segment in result["segments"]:
+                start_time = segment.get("start", 0)
+                end_time = segment.get("end", 0)
+                text = segment.get("text", "").strip()
+                
+                segments.append({
+                    "start_time_ms": int(start_time * 1000),
+                    "end_time_ms": int(end_time * 1000),
+                    "text": text
+                })
+        else:
+            logger.warning("Временные метки запрошены, но не найдены в результате транскрибации")
+        
+        logger.info(f"Транскрибация с временными метками завершена: получено {len(segments)} сегментов")
+        
+        # Возвращаем словарь с сегментами и полным текстом
+        return {
+            "segments": segments,
+            "text": full_text
+        }
 
-        return transcribed_text
-
-    def process_file(self, input_path: str) -> str:
+    def process_file(self, input_path: str) -> Union[str, Dict]:
         """
         Полный процесс обработки и транскрибации аудиофайла.
         
@@ -170,7 +212,9 @@ class WhisperTranscriber:
             input_path: Путь к исходному аудиофайлу.
             
         Returns:
-            Распознанный текст.
+            В зависимости от параметра return_timestamps:
+            - Если return_timestamps=False: строка с распознанным текстом
+            - Если return_timestamps=True: словарь с ключами "segments" и "text"
         """
         start_time = time.time()
         logger.info(f"Начало обработки файла: {input_path}")
@@ -182,12 +226,12 @@ class WhisperTranscriber:
             processed_path, temp_files = self.audio_processor.process_audio(input_path)
 
             # Транскрибация
-            text = self.transcribe(processed_path)
+            result = self.transcribe(processed_path)
 
             elapsed_time = time.time() - start_time
             logger.info(f"Обработка и транскрибация завершены за {elapsed_time:.2f} секунд")
 
-            return text
+            return result
 
         finally:
             # Очистка временных файлов

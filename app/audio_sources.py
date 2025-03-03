@@ -11,7 +11,7 @@ import requests
 import abc
 from typing import Dict, Tuple, Optional, BinaryIO
 
-from .logger import logger
+from .utils import logger
 
 class AudioSource(abc.ABC):
     """Абстрактный класс для различных источников аудиофайлов.
