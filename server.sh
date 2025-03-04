@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Имя окружения conda
-CONDA_ENV_NAME="transcribe"
+CONDA_ENV_NAME="whisper-api-server"
 
 # Флаг обновления (по умолчанию false)
 UPDATE_ENV=false

@@ -2,6 +2,7 @@
     "service_port": 5042,
     "model_path": "/mnt/cloud/llm/whisper/whisper-large-v3-russian",
     "language": "russian",
+    "enable_history": true,
     "chunk_length_s": 30,
     "batch_size": 16,
     "max_new_tokens": 256,
