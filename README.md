@@ -86,6 +86,7 @@ The service is configured through the `config.json` file:
 | `batch_size` | Batch size for processing |
 | `max_new_tokens` | Maximum new tokens for the model output |
 | `return_timestamps` | Whether to return timestamps in the transcription |
+| `audio_rate` | Audio sampling rate in Hz |
 | `norm_level` | Normalization level for audio preprocessing |
 | `compand_params` | Parameters for audio compression/expansion |
 

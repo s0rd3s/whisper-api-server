@@ -38,18 +38,21 @@ class AudioProcessor:
         Returns:
             Путь к сконвертированному WAV-файлу.
         """
+
+        audio_rate = self.config["audio_rate"]
+
         # Проверка расширения файла
         if input_path.lower().endswith('.wav'):
             # Проверяем, нужно ли преобразовывать WAV-файл (например, если частота не 16 кГц)
             try:
                 info = subprocess.check_output(['soxi', input_path]).decode()
-                if '16000 Hz' in info:
-                    logger.info(f"Файл {input_path} уже в формате WAV с частотой 16 кГц")
+                if f'{audio_rate} Hz' in info:
+                    logger.info(f"Файл {input_path} уже в формате WAV с частотой {audio_rate} Гц")
                     return input_path
             except subprocess.CalledProcessError:
                 logger.warning(f"Не удалось получить информацию о WAV-файле {input_path}")
                 # Продолжаем конвертацию, чтобы быть уверенными в формате
-        
+
         # Создаем временный файл для WAV
         temp_dir = tempfile.mkdtemp()
         output_path = os.path.join(temp_dir, f"{uuid.uuid4()}.wav")
@@ -60,7 +63,7 @@ class AudioProcessor:
             "-hide_banner",
             "-loglevel", "warning",
             "-i", input_path,
-            "-ar", "16000",
+            "-ar", f"{audio_rate}",
             "-ac", "1",  # Монофонический звук
             output_path
         ]
@@ -127,7 +130,7 @@ class AudioProcessor:
             "sox",
             input_path,
             output_path,
-            "pad", "2.0"  # 2 секунды тишины в начале
+            "pad", "2.0", "1.0"  # Добавление тишины в начале и в конце (секунды)
         ]
         
         logger.info(f"Добавление тишины: {' '.join(cmd)}")
