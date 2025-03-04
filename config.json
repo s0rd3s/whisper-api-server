@@ -1,9 +1,9 @@
 {
     "service_port": 5042,
-    "model_path": "/mnt/cloud/llm/whisper/whisper-large-v3-russian",
+    "model_path": "/mnt/cloud/llm/whisper/whisper-large-v3-russian-ties-podlodka",
     "language": "russian",
     "enable_history": true,
-    "chunk_length_s": 22,
+    "chunk_length_s": 25,
     "batch_size": 20,
     "max_new_tokens": 384,
     "return_timestamps": false,
