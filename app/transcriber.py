@@ -38,6 +38,7 @@ class WhisperTranscriber:
         self.batch_size = config["batch_size"]
         self.max_new_tokens = config["max_new_tokens"]
         self.return_timestamps = config["return_timestamps"]
+        self.temperature = config["temperature"]
 
         # Оптимальный тип для тензоров
         self.torch_dtype = torch.bfloat16
@@ -155,7 +156,7 @@ class WhisperTranscriber:
         # Транскрибация с корректным форматом данных
         result = self.asr_pipeline(
             {"raw": audio_array, "sampling_rate": sampling_rate}, 
-            generate_kwargs={"language": self.language, "max_new_tokens": self.max_new_tokens},
+            generate_kwargs={"language": self.language, "max_new_tokens": self.max_new_tokens, "temperature": self.temperature},
             return_timestamps=self.return_timestamps
         )
 

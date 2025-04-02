@@ -4,3 +4,4 @@ models
 logs
 client.html
 /history/*
+config.json.v*
