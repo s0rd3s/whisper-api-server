@@ -374,6 +374,9 @@
     </footer>
 
     <script>
+        // Configuration. The same as in nginx path
+        const proxyPath = '/tools/transcription';
+
         document.addEventListener('DOMContentLoaded', function() {
             const uploadArea = document.getElementById('upload-area');
             const fileInput = document.getElementById('file-input');
@@ -494,9 +497,6 @@
                 formData.append('file', file);
                 formData.append('model', 'whisper-1');
                 
-                // Configuration
-                const proxyPath = '/tools/transcription';
-
                 // Dynamically determine API URL based on current path
                 let apiUrl;
                 if (window.location.pathname.includes(proxyPath)) {
