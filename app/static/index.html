@@ -321,7 +321,7 @@
         <div class="container">
             <div class="left-panel">
                 <div class="logo">
-                    Transcription Tool Logo
+                    Transcription Tool
                 </div>
                 
                 <div class="upload-area" id="upload-area">
@@ -341,8 +341,6 @@
                     <ul>
                         <li>Upload audio files (MP3, WAV, M4A, etc.)</li>
                         <li>Automatic transcription using AI</li>
-                        <li>Speech and song detection</li>
-                        <li>Text formatting for improved readability</li>
                     </ul>
                 </div>
             </div>
@@ -372,7 +370,7 @@
     </main>
     
     <footer>
-        © Audio Transcription Tool 2025 (v1.0.0)
+        © Audio Transcription Tool 2025 (v0.1)
     </footer>
 
     <script>
@@ -548,7 +546,7 @@
                 // Simple formatting - split on periods followed by spaces and create paragraphs
                 return text.split(/\.(?=\s|$)/).map(sentence => {
                     sentence = sentence.trim();
-                    return sentence ? `<p>${sentence}.</p>` : '';
+                    return sentence ? `<p>${sentence}</p>` : '';
                 }).join('');
             }
             
