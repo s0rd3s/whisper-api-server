@@ -498,7 +498,8 @@
                 formData.append('model', 'whisper-1');
                 
                 // Using http to connect to the server
-                const apiUrl = `http://${serverUrl}`;
+                // const apiUrl = `http://${serverUrl}`;
+                const apiUrl = '/tools/transcription/v1/audio/transcriptions';
                 
                 addDebugInfo('Request URL', apiUrl);
                 addDebugInfo('File Name', file.name);

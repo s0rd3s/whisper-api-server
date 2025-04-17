@@ -38,14 +38,6 @@ class WhisperServiceAPI:
 
         # Настройка CORS с явным разрешением всех методов, заголовков и источников
         CORS(self.app, resources={r"/*": {"origins": "*", "supports_credentials": True}})
-        
-        # Также добавим CORS заголовки через after_request для гарантии
-        @self.app.after_request
-        def after_request(response):
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-            return response
 
         # Регистрация маршрутов
         Routes(self.app, self.transcriber, self.config)
