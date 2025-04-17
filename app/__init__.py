@@ -1,6 +1,8 @@
 import json
+import os
 from typing import Dict
 from flask import Flask
+from flask_cors import CORS
 import waitress
 
 # Импорт классов и функций из других модулей
@@ -24,11 +26,18 @@ class WhisperServiceAPI:
         # Порт для сервиса
         self.port = self.config["service_port"]
 
+        # Определение пути к директории static
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        static_folder_path = os.path.join(current_dir, 'static')
+
         # Создание экземпляра транскрайбера
         self.transcriber = WhisperTranscriber(self.config)
 
-        # Создание Flask-приложения
-        self.app = Flask("whisper-service")
+        # Создание Flask-приложения с явным указанием пути к static
+        self.app = Flask("whisper-service", static_folder=static_folder_path)
+
+        # Enable CORS for all routes
+        CORS(self.app)
 
         # Регистрация маршрутов
         Routes(self.app, self.transcriber, self.config)

@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription</title>
+    <style>
+        :root {
+            --primary-color: #2d3e50;
+            --accent-color: #f1c40f;
+            --text-color: #333;
+            --light-bg: #f5f5f5;
+            --border-color: #ddd;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #e6eaee;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100vh;
+        }
+        
+        main {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 0;
+        }
+        
+        .container {
+            display: flex;
+            width: 90%;
+            max-width: 1200px;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .left-panel {
+            flex: 0.4;
+            padding: 2rem;
+            background-color: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+        }
+        
+        .right-panel {
+            flex: 0.6;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .logo {
+            margin-bottom: 2rem;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+        
+        .upload-area {
+            width: 100%;
+            height: 200px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--accent-color);
+            background-color: rgba(241, 196, 15, 0.05);
+        }
+        
+        .upload-area.active {
+            border-color: var(--accent-color);
+            background-color: rgba(241, 196, 15, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+        
+        .features {
+            width: 100%;
+            margin-top: 2rem;
+        }
+        
+        .features h2 {
+            margin-bottom: 1rem;
+            font-size: 24px;
+        }
+        
+        .features ul {
+            padding-left: 1.5rem;
+        }
+        
+        .features li {
+            margin-bottom: 0.8rem;
+            font-size: 16px;
+        }
+        
+        .transcript-area {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            min-height: 300px;
+            position: relative;
+            background-color: #fff;
+            overflow-y: auto;
+        }
+        
+        .transcript-placeholder {
+            color: #aaa;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 80%;
+        }
+        
+        h1 {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 32px;
+            color: var(--primary-color);
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        .status {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            border-radius: 4px;
+            text-align: center;
+            display: none;
+        }
+        
+        .status.error {
+            background-color: #ffebee;
+            color: #c62828;
+            display: block;
+        }
+        
+        .status.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            display: block;
+        }
+        
+        .status.loading {
+            display: block;
+            color: var(--primary-color);
+        }
+        
+        .debug-panel {
+            margin-top: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .debug-header {
+            background-color: #f1f1f1;
+            padding: 0.5rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .debug-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .debug-content {
+            padding: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+            background-color: #f8f9fa;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #34495e;
+        }
+        
+        .btn-small {
+            padding: 0.25rem 0.5rem;
+            font-size: 14px;
+        }
+        
+        .btn-accent {
+            background-color: var(--accent-color);
+            color: var(--primary-color);
+        }
+        
+        .btn-accent:hover {
+            background-color: #e3b90b;
+        }
+        
+        .debug-item {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px dashed #ddd;
+        }
+        
+        .debug-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        
+        .debug-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 0.25rem;
+        }
+        
+        .debug-value {
+            margin-left: 1rem;
+        }
+        
+        footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            main {
+                padding: 1rem;
+                align-items: flex-start;
+            }
+            
+            .container {
+                flex-direction: column;
+                width: 100%;
+                max-width: 100%;
+                margin: 0;
+                border-radius: 4px;
+            }
+            
+            .left-panel, .right-panel {
+                flex: 1;
+                width: 100%;
+                padding: 1.5rem;
+                box-sizing: border-box;
+            }
+            
+            .upload-area {
+                height: 150px;
+            }
+            
+            .transcript-area {
+                min-height: 200px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="container">
+            <div class="left-panel">
+                <div class="logo">
+                    Transcription Tool Logo
+                </div>
+                
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#2d3e50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <p>Drag audio files here or click to browse</p>
+                    <input type="file" id="file-input" accept="audio/*" />
+                </div>
+                
+                <div class="features">
+                    <h2>Features:</h2>
+                    <ul>
+                        <li>Upload audio files (MP3, WAV, M4A, etc.)</li>
+                        <li>Automatic transcription using AI</li>
+                        <li>Speech and song detection</li>
+                        <li>Text formatting for improved readability</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="right-panel">
+                <h1>Transcription</h1>
+                <div class="transcript-area" id="transcript-area">
+                    <div class="transcript-placeholder" id="transcript-placeholder">
+                        Your transcription will appear here
+                    </div>
+                    <div id="transcript-content"></div>
+                </div>
+                
+                <div class="status" id="status"></div>
+                
+                <div class="debug-panel">
+                    <div class="debug-header">
+                        <h3>Debug Information</h3>
+                        <button id="toggle-debug" class="btn btn-small">Hide</button>
+                    </div>
+                    <div class="debug-content" id="debug-info">
+                        <p>API requests and responses will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        © Audio Transcription Tool 2025 (v1.0.0)
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('upload-area');
+            const fileInput = document.getElementById('file-input');
+            const transcriptArea = document.getElementById('transcript-area');
+            const transcriptPlaceholder = document.getElementById('transcript-placeholder');
+            const transcriptContent = document.getElementById('transcript-content');
+            const statusEl = document.getElementById('status');
+            const debugInfo = document.getElementById('debug-info');
+            const toggleDebugBtn = document.getElementById('toggle-debug');
+            
+            // Server endpoint
+            const serverUrl = '192.168.1.28:5042/v1/audio/transcriptions';
+            
+            function addDebugInfo(label, value) {
+                const debugItem = document.createElement('div');
+                debugItem.className = 'debug-item';
+                
+                const debugLabel = document.createElement('div');
+                debugLabel.className = 'debug-label';
+                debugLabel.textContent = label;
+                
+                const debugValue = document.createElement('div');
+                debugValue.className = 'debug-value';
+                
+                if (typeof value === 'object') {
+                    debugValue.textContent = JSON.stringify(value, null, 2);
+                } else {
+                    debugValue.textContent = value;
+                }
+                
+                debugItem.appendChild(debugLabel);
+                debugItem.appendChild(debugValue);
+                
+                debugInfo.appendChild(debugItem);
+                debugInfo.scrollTop = debugInfo.scrollHeight;
+            }
+            
+            // Toggle debug panel
+            toggleDebugBtn.addEventListener('click', () => {
+                const debugContent = document.querySelector('.debug-content');
+                if (debugContent.style.display === 'none') {
+                    debugContent.style.display = 'block';
+                    toggleDebugBtn.textContent = 'Hide';
+                } else {
+                    debugContent.style.display = 'none';
+                    toggleDebugBtn.textContent = 'Show';
+                }
+            });
+            
+            function clearDebugInfo() {
+                debugInfo.innerHTML = '';
+            }
+            
+            // Handle drag and drop events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // Highlight drop area when dragging over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                uploadArea.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight() {
+                uploadArea.classList.add('active');
+            }
+            
+            function unhighlight() {
+                uploadArea.classList.remove('active');
+            }
+            
+            // Handle dropped files
+            uploadArea.addEventListener('drop', handleDrop, false);
+            
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    handleFiles(files);
+                }
+            }
+            
+            // Handle file input change
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (fileInput.files.length > 0) {
+                    handleFiles(fileInput.files);
+                }
+            });
+            
+            function handleFiles(files) {
+                const file = files[0]; // Take only the first file
+                
+                if (!file.type.startsWith('audio/')) {
+                    showStatus('Please select an audio file.', 'error');
+                    return;
+                }
+                
+                uploadFile(file);
+            }
+            
+            function uploadFile(file) {
+                showStatus('<div class="loading-spinner"></div> Transcribing...', 'loading');
+                clearDebugInfo();
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('model', 'whisper-1');
+                
+                // Using http to connect to the server
+                const apiUrl = `http://${serverUrl}`;
+                
+                addDebugInfo('Request URL', apiUrl);
+                addDebugInfo('File Name', file.name);
+                addDebugInfo('File Size', `${(file.size / 1024).toFixed(2)} KB`);
+                addDebugInfo('File Type', file.type);
+                addDebugInfo('Request Time', new Date().toLocaleTimeString());
+                
+                fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    addDebugInfo('Response Status', `${response.status} ${response.statusText}`);
+                    addDebugInfo('Response Headers', Object.fromEntries([...response.headers]));
+                    
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            addDebugInfo('Error Response', text);
+                            throw new Error(`Server responded with ${response.status}: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    addDebugInfo('Response Data', data);
+                    showTranscription(data.text || data);
+                    showStatus('Transcription completed successfully!', 'success');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    addDebugInfo('Fetch Error', error.message);
+                    showStatus(`Error: ${error.message}`, 'error');
+                });
+            }
+            
+            function showTranscription(text) {
+                transcriptPlaceholder.style.display = 'none';
+                
+                // Format the transcription with paragraphs
+                const formatted = formatTranscription(text);
+                transcriptContent.innerHTML = formatted;
+            }
+            
+            function formatTranscription(text) {
+                // Simple formatting - split on periods followed by spaces and create paragraphs
+                return text.split(/\.(?=\s|$)/).map(sentence => {
+                    sentence = sentence.trim();
+                    return sentence ? `<p>${sentence}.</p>` : '';
+                }).join('');
+            }
+            
+            function showStatus(message, type) {
+                statusEl.innerHTML = message;
+                statusEl.className = 'status';
+                statusEl.classList.add(type);
+                
+                if (type === 'success' || type === 'error') {
+                    setTimeout(() => {
+                        statusEl.style.display = 'none';
+                    }, 5000);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

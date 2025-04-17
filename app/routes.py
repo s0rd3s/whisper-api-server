@@ -38,6 +38,11 @@ class Routes:
     def _register_routes(self):
         """Регистрация всех эндпоинтов."""
 
+        @self.app.route('/', methods=['GET'])
+        def index():
+            """Корень. Отдаёт HTML клиент."""
+            return self.app.send_static_file('index.html')
+
         @self.app.route('/health', methods=['GET'])
         def health_check():
             """Эндпоинт для проверки статуса сервиса."""
