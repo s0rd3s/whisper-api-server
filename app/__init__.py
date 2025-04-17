@@ -37,7 +37,7 @@ class WhisperServiceAPI:
         self.app = Flask("whisper-service", static_folder=static_folder_path)
 
         # Настройка CORS с явным разрешением всех методов, заголовков и источников
-        CORS(self.app, resources={r"/*": {"origins": "*", "supports_credentials": True}})
+        CORS(self.app)
 
         # Регистрация маршрутов
         Routes(self.app, self.transcriber, self.config)
