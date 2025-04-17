@@ -384,9 +384,6 @@
             const debugInfo = document.getElementById('debug-info');
             const toggleDebugBtn = document.getElementById('toggle-debug');
             
-            // Server endpoint
-            const serverUrl = '192.168.1.28:5042/v1/audio/transcriptions';
-            
             function addDebugInfo(label, value) {
                 const debugItem = document.createElement('div');
                 debugItem.className = 'debug-item';
@@ -497,9 +494,18 @@
                 formData.append('file', file);
                 formData.append('model', 'whisper-1');
                 
-                // Using http to connect to the server
-                // const apiUrl = `http://${serverUrl}`;
-                const apiUrl = '/tools/transcription/v1/audio/transcriptions';
+                // Configuration
+                const proxyPath = '/tools/transcription';
+
+                // Dynamically determine API URL based on current path
+                let apiUrl;
+                if (window.location.pathname.includes(proxyPath)) {
+                    // Access through nginx proxy
+                    apiUrl = `${proxyPath}/v1/audio/transcriptions`;
+                } else {
+                    // Direct access to the server
+                    apiUrl = '/v1/audio/transcriptions';
+                }
                 
                 addDebugInfo('Request URL', apiUrl);
                 addDebugInfo('File Name', file.name);
