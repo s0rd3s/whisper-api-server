@@ -285,10 +285,6 @@ If the model fails to load:
 - Ensure you have enough RAM/VRAM for the model
 - For CUDA issues, check that your GPU drivers are up to date
 
-## License
-
-[Your License Here]
-
 ## Acknowledgements
 
 - OpenAI for the Whisper model
