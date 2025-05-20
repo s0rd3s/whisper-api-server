@@ -2,25 +2,31 @@
 
 A local, OpenAI-compatible speech recognition API service using the Whisper model. This service provides a straightforward way to transcribe audio files in various formats with high accuracy and is designed to be compatible with the OpenAI Whisper API.
 
+![Client Interface](client.png)
+
 ## Features
 
-- 🔊 High-quality speech recognition using Whisper model
+- 🔊 High-quality speech recognition using Whisper models
 - 🌐 OpenAI-compatible API endpoints
 - 🚀 Hardware acceleration support (CUDA, MPS)
 - ⚡ Flash Attention 2 for faster transcription on compatible GPUs
 - 🎛️ Audio preprocessing for better transcription results
-- 🔄 Multiple input formats (file upload, URL, base64, local files)
-- 🚪 Easy deployment with Docker or conda environment
+- 🔄 Multiple input methods (file upload, URL, base64, local files)
+- 📊 Optional timestamp generation for word-level alignment
+- 🎧 Convenient built-in client with text editing and audio playback capabilities
+- 📱 Responsive web interface included
+- 📝 Transcription history logging
 
 ## Requirements
 
-- Python 3.10+ (3.11 recommended)
+- Python 3.12+ recommended
 - CUDA-compatible GPU (optional, for faster processing)
 - FFmpeg and SoX for audio processing
+- Whisper model (download from Hugging Face)
 
 ## Installation
 
-### Using conda (recommended)
+### Using server.sh (recommended)
 
 1. Clone the repository:
 ```bash
@@ -35,7 +41,7 @@ chmod +x server.sh
 ```
 
 This will:
-- Create a conda environment named "transcribe" with Python 3.11
+- Create a conda environment named "whisper-api" with Python 3.12
 - Install all required dependencies
 - Start the service
 
@@ -43,8 +49,8 @@ This will:
 
 1. Create and activate a conda environment:
 ```bash
-conda create -n transcribe python=3.11
-conda activate transcribe
+conda create -n whisper-api python=3.12
+conda activate whisper-api
 ```
 
 2. Install the required dependencies:
@@ -64,14 +70,17 @@ The service is configured through the `config.json` file:
 ```json
 {
     "service_port": 5042,
-    "model_path": "/mnt/cloud/llm/whisper/whisper-large-v3-russian",
+    "model_path": "/path/to/whisper/model",
     "language": "russian",
-    "chunk_length_s": 30,
-    "batch_size": 16,
-    "max_new_tokens": 256,
+    "enable_history": true,
+    "chunk_length_s": 28,
+    "batch_size": 8,
+    "max_new_tokens": 384,
+    "temperature": 0.01,
     "return_timestamps": false,
-    "norm_level": "-0.5",
-    "compand_params": "0.3,1 -90,-90,-70,-70,-60,-20,0,0 -5 0 0.2"
+    "audio_rate": 8000,
+    "norm_level": "-0.55",
+    "compand_params": "0.3,1 -90,-90,-70,-50,-40,-15,0,0 -7 0 0.15"
 }
 ```
 
@@ -82,13 +91,30 @@ The service is configured through the `config.json` file:
 | `service_port` | Port on which the service will run |
 | `model_path` | Path to the Whisper model directory |
 | `language` | Language for transcription (e.g., "russian", "english") |
+| `enable_history` | Whether to save transcription history (true/false) |
 | `chunk_length_s` | Length of audio chunks for processing (in seconds) |
 | `batch_size` | Batch size for processing |
 | `max_new_tokens` | Maximum new tokens for the model output |
+| `temperature` | Model temperature parameter (lower = more deterministic) |
 | `return_timestamps` | Whether to return timestamps in the transcription |
 | `audio_rate` | Audio sampling rate in Hz |
 | `norm_level` | Normalization level for audio preprocessing |
 | `compand_params` | Parameters for audio compression/expansion |
+
+## Web Interface
+
+The service includes a user-friendly web interface accessible at:
+```
+http://localhost:5042/
+```
+
+The interface allows you to:
+- Upload audio files via drag-and-drop or file picker
+- Listen to the uploaded audio
+- View transcription results in real-time
+- Edit the transcription text if needed
+- Download results as TXT or JSON
+- View API request/response details for debugging
 
 ## API Usage
 
@@ -102,6 +128,12 @@ curl http://localhost:5042/health
 
 ```bash
 curl http://localhost:5042/config
+```
+
+### Get Available Models
+
+```bash
+curl http://localhost:5042/v1/models
 ```
 
 ### Transcribe an Audio File (OpenAI-compatible)
@@ -135,6 +167,54 @@ curl -X POST http://localhost:5042/local/transcriptions \
   -d '{"file_path":"/path/to/audio.mp3"}'
 ```
 
+### Request with Additional Parameters
+
+```bash
+curl -X POST http://localhost:5042/v1/audio/transcriptions \
+  -F file=@audio.mp3 \
+  -F language=english \
+  -F return_timestamps=true \
+  -F temperature=0.0
+```
+
+## Response Format
+
+### Without Timestamps
+
+```json
+{
+  "text": "Transcribed text content",
+  "processing_time": 2.34,
+  "response_size_bytes": 1234,
+  "duration_seconds": 10.5,
+  "model": "whisper-large-v3"
+}
+```
+
+### With Timestamps
+
+```json
+{
+  "segments": [
+    {
+      "start_time_ms": 0,
+      "end_time_ms": 5000,
+      "text": "First segment of text"
+    },
+    {
+      "start_time_ms": 5000,
+      "end_time_ms": 10000,
+      "text": "Second segment of text"
+    }
+  ],
+  "text": "First segment of text Second segment of text",
+  "processing_time": 3.45,
+  "response_size_bytes": 2345,
+  "duration_seconds": 10.5,
+  "model": "whisper-large-v3"
+}
+```
+
 ## Project Structure
 
 The project consists of the following components:
@@ -142,14 +222,16 @@ The project consists of the following components:
 - `server.py`: Entry point that initializes and starts the service
 - `server.sh`: Bash script for launching the server with optional conda environment update
 - `config.json`: Service configuration file
-- `requirements.txt`: Project dependencies for conda/pip
 - `app/`: Main application module
   - `__init__.py`: Contains the `WhisperServiceAPI` class for service initialization
-  - `logger.py`: Logging configuration
+  - `utils.py`: Logging configuration
   - `transcriber.py`: Contains the `WhisperTranscriber` class for speech recognition
   - `audio_processor.py`: Contains the `AudioProcessor` class for audio preprocessing
-  - `audio_sources.py`: Contains the `AudioSource` abstract class and implementations
+  - `audio_sources.py`: Contains different audio source handlers (upload, URL, base64, local)
+  - `transcriber_service.py`: Manages the transcription workflow
+  - `history_logger.py`: Handles saving transcription history
   - `routes.py`: Contains the API route definitions
+  - `static/`: Web interface files
 
 ## Advanced Usage
 
@@ -161,10 +243,6 @@ You can use any Whisper model by changing the `model_path` in the configuration:
 2. Update the `model_path` in `config.json`
 3. Restart the service
 
-#### Recommended Models
-
-For Russian language transcription, we recommend using the [**whisper-large-v3-russian**](https://huggingface.co/antony66/whisper-large-v3-russian) model from Hugging Face. This model is fine-tuned specifically for Russian speech recognition and delivers high accuracy. For faster transcription with slightly lower accuracy, consider the [**whisper-large-v3-turbo-russian**](https://huggingface.co/dvislobokov/whisper-large-v3-turbo-russian) model, which is optimized for speed.
-
 ### Hardware Acceleration
 
 The service automatically selects the best available compute device:
@@ -173,6 +251,15 @@ The service automatically selects the best available compute device:
 - CPU (fallback)
 
 For best performance on NVIDIA GPUs, Flash Attention 2 is used when available.
+
+### Transcription History
+
+When `enable_history` is set to `true`, transcription results are saved in a `history` folder organized by date. Each transcription is saved as a JSON file with the format:
+```
+history/
+└── YYYY-MM-DD/
+    └── timestamp_filename_xxxx.json
+```
 
 ## Troubleshooting
 
@@ -189,6 +276,18 @@ For slow transcription:
 - Use a GPU if available
 - Adjust `chunk_length_s` and `batch_size` parameters
 - Consider using a smaller Whisper model
+- Reduce `audio_rate` if full quality isn't needed
+
+### Model Loading Issues
+
+If the model fails to load:
+- Check that the model path is correct
+- Ensure you have enough RAM/VRAM for the model
+- For CUDA issues, check that your GPU drivers are up to date
+
+## License
+
+[Your License Here]
 
 ## Acknowledgements
 
