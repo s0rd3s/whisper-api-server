@@ -30,8 +30,8 @@ A local, OpenAI-compatible speech recognition API service using the Whisper mode
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/whisper-api-service.git
-cd whisper-api-service
+git clone https://github.com/kreolsky/whisper-api-server.git
+cd whisper-api-server
 ```
 
 2. Run the server script with the update flag to create and set up the conda environment:
