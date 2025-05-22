@@ -1,4 +1,4 @@
-# Whisper API Service
+# Whisper API server
 
 A local, OpenAI-compatible speech recognition API service using the Whisper model. This service provides a straightforward way to transcribe audio files in various formats with high accuracy and is designed to be compatible with the OpenAI Whisper API.
 
@@ -45,7 +45,7 @@ This will:
 - Install all required dependencies
 - Start the service
 
-### Manual Installation
+### Manual installation
 
 1. Create and activate a conda environment:
 ```bash
@@ -84,7 +84,7 @@ The service is configured through the `config.json` file:
 }
 ```
 
-### Configuration Parameters
+### Configuration parameters
 
 | Parameter | Description |
 |-----------|-------------|
@@ -101,7 +101,7 @@ The service is configured through the `config.json` file:
 | `norm_level` | Normalization level for audio preprocessing |
 | `compand_params` | Parameters for audio compression/expansion |
 
-## Web Interface
+## Web interface
 
 The service includes a user-friendly web interface accessible at:
 ```
@@ -110,33 +110,33 @@ http://localhost:5042/
 
 The interface allows you to:
 - Upload audio files via drag-and-drop or file picker
+- Upload multiple files for sequential processing
 - Listen to the uploaded audio
-- View transcription results in real-time
 - Edit the transcription text if needed
-- Download results as TXT or JSON
+- Download results as TXT or JSON or copy results to clipboard
 - View API request/response details for debugging
 
-## API Usage
+## API usage
 
-### Health Check
+### Health check
 
 ```bash
 curl http://localhost:5042/health
 ```
 
-### Get Configuration
+### Get configuration
 
 ```bash
 curl http://localhost:5042/config
 ```
 
-### Get Available Models
+### Get available models
 
 ```bash
 curl http://localhost:5042/v1/models
 ```
 
-### Transcribe an Audio File (OpenAI-compatible)
+### Transcribe an audio file (OpenAI-compatible)
 
 ```bash
 curl -X POST http://localhost:5042/v1/audio/transcriptions \
@@ -151,7 +151,7 @@ curl -X POST http://localhost:5042/v1/audio/transcriptions/url \
   -d '{"url":"https://example.com/audio.mp3"}'
 ```
 
-### Transcribe from Base64
+### Transcribe from base64
 
 ```bash
 curl -X POST http://localhost:5042/v1/audio/transcriptions/base64 \
@@ -159,7 +159,7 @@ curl -X POST http://localhost:5042/v1/audio/transcriptions/base64 \
   -d '{"file":"base64_encoded_audio_data"}'
 ```
 
-### Transcribe a Local File on the Server
+### Transcribe a local file on the server
 
 ```bash
 curl -X POST http://localhost:5042/local/transcriptions \
@@ -167,7 +167,7 @@ curl -X POST http://localhost:5042/local/transcriptions \
   -d '{"file_path":"/path/to/audio.mp3"}'
 ```
 
-### Request with Additional Parameters
+### Request with additional parameters
 
 ```bash
 curl -X POST http://localhost:5042/v1/audio/transcriptions \
@@ -177,9 +177,9 @@ curl -X POST http://localhost:5042/v1/audio/transcriptions \
   -F temperature=0.0
 ```
 
-## Response Format
+## Response format
 
-### Without Timestamps
+### Without timestamps
 
 ```json
 {
@@ -191,7 +191,7 @@ curl -X POST http://localhost:5042/v1/audio/transcriptions \
 }
 ```
 
-### With Timestamps
+### With timestamps
 
 ```json
 {
@@ -215,7 +215,7 @@ curl -X POST http://localhost:5042/v1/audio/transcriptions \
 }
 ```
 
-## Project Structure
+## Project structure
 
 The project consists of the following components:
 
@@ -233,9 +233,9 @@ The project consists of the following components:
   - `routes.py`: Contains the API route definitions
   - `static/`: Web interface files
 
-## Advanced Usage
+## Advanced usage
 
-### Using with Different Models
+### Using with different models
 
 You can use any Whisper model by changing the `model_path` in the configuration:
 
@@ -243,7 +243,7 @@ You can use any Whisper model by changing the `model_path` in the configuration:
 2. Update the `model_path` in `config.json`
 3. Restart the service
 
-### Hardware Acceleration
+### Hardware acceleration
 
 The service automatically selects the best available compute device:
 - CUDA GPU (index 1 if available, otherwise index 0)
@@ -252,7 +252,7 @@ The service automatically selects the best available compute device:
 
 For best performance on NVIDIA GPUs, Flash Attention 2 is used when available.
 
-### Transcription History
+### Transcription history
 
 When `enable_history` is set to `true`, transcription results are saved in a `history` folder organized by date. Each transcription is saved as a JSON file with the format:
 ```
@@ -263,14 +263,14 @@ history/
 
 ## Troubleshooting
 
-### Audio Processing Issues
+### Audio processing issues
 
 If you encounter audio processing errors:
 - Ensure that FFmpeg and SoX are installed on your system
 - Check that the audio file is not corrupted
 - Try different audio preprocessing parameters in the configuration
 
-### Performance Issues
+### Performance issues
 
 For slow transcription:
 - Use a GPU if available
