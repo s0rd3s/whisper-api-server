@@ -479,6 +479,10 @@
             transform: scale(1.1);
         }
         
+        .download-button.hidden {
+            display: none;
+        }
+        
         #transcript-content {
             min-height: 100%;
             display: none;
@@ -717,7 +721,7 @@
                                 </div>
                             </div>
                             <div class="text-container">
-                                <p>Drag audio files here or click to browse</p>
+                                <p>Drag audio files here</p>
                                 <small>Multiple files supported</small>
                             </div>
                         </div>
@@ -801,12 +805,10 @@
                                 </svg>
                             </button>
                             <button class="download-button" id="download-json" title="Download JSON">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <path d="M8 10v8"></path>
-                                    <path d="M12 18v-8"></path>
-                                    <path d="M16 14v4"></path>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
                                 </svg>
                             </button>
                         </div>
@@ -817,7 +819,7 @@
     </main>
     
     <footer>
-        © Audio Transcription Tool 2025 (v0.5)
+        © Audio Transcription Tool 2025 (v0.5.1)
     </footer>
 
     <script>
@@ -869,6 +871,25 @@
                 // Activate the selected tab
                 button.classList.add('active');
                 panel.classList.add('active');
+                
+                // Show/hide buttons based on active tab
+                updateButtonVisibility(button);
+            }
+            
+            function updateButtonVisibility(activeButton) {
+                if (activeButton === transcriptTabBtn) {
+                    // Show transcript-related buttons, hide JSON download
+                    copyTextBtn.classList.remove('hidden');
+                    downloadTextBtn.classList.remove('hidden');
+                    downloadAllBtn.classList.remove('hidden');
+                    downloadJsonBtn.classList.add('hidden');
+                } else if (activeButton === debugTabBtn) {
+                    // Hide transcript buttons, show JSON download
+                    copyTextBtn.classList.add('hidden');
+                    downloadTextBtn.classList.add('hidden');
+                    downloadAllBtn.classList.add('hidden');
+                    downloadJsonBtn.classList.remove('hidden');
+                }
             }
             
             // File management system
@@ -1461,6 +1482,9 @@
             
             // Initialize clear button state
             updateFilesCount();
+            
+            // Initialize button visibility (transcript tab is active by default)
+            updateButtonVisibility(transcriptTabBtn);
             
             function showStatus(message, type) {
                 statusEl.innerHTML = message;
