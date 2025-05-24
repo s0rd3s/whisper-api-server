@@ -819,7 +819,7 @@
     </main>
     
     <footer>
-        © Audio Transcription Tool 2025 (v0.5.1)
+        © Audio Transcription Tool 2025 (v0.5.2)
     </footer>
 
     <script>
@@ -1087,7 +1087,13 @@
                 fileItem.addEventListener('click', () => selectFile(fileId));
                 
                 noFilesMessage.style.display = 'none';
-                filesContainer.appendChild(fileItem);
+                
+                // Add new files to the TOP of the container (prepend instead of append)
+                if (filesContainer.firstChild && filesContainer.firstChild !== noFilesMessage) {
+                    filesContainer.insertBefore(fileItem, filesContainer.firstChild);
+                } else {
+                    filesContainer.appendChild(fileItem);
+                }
             }
             
             function updateFilesCount() {
@@ -1156,6 +1162,8 @@
                 }
                 
                 fileManager.isProcessing = true;
+                // Process files from the BEGINNING of the queue (oldest files first)
+                // This means files will be processed from bottom to top in the UI
                 const fileId = fileManager.processingQueue.shift();
                 const fileData = fileManager.files.get(fileId);
                 
