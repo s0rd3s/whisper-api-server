@@ -102,7 +102,14 @@ class WhisperServiceAPI:
         self.logger.info(f"Запуск сервиса на порту {self.port}")
         
         # Использовать waitress для production-ready сервера
-        waitress.serve(self.app, host='0.0.0.0', port=self.port)
+        waitress.serve(
+            self.app, 
+            host='0.0.0.0', 
+            port=self.port, 
+            # Увеличиваем время, которое сервер будет ждать ответа от приложения,
+            # прежде чем разорвать соединение из-за отсутствия сетевой активности.
+            channel_timeout=600  # 10 минут
+        )
     
     def cleanup(self) -> None:
         """
