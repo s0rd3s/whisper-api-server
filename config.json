@@ -20,5 +20,10 @@
     "allowed_directories": [],
     "version": "1.0.0",
     "log_level": "INFO",
-    "log_file": "logs/whisper_api.log"
+    "log_file": "logs/whisper_api.log",
+    "request_logging": {
+        "exclude_endpoints": ["/health", "/static"],
+        "sensitive_headers": ["authorization", "cookie", "set-cookie", "proxy-authorization", "x-api-key"],
+        "log_debug": true
+    }
 }

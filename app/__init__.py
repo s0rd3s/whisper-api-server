@@ -12,6 +12,7 @@ from .routes import Routes
 from .validators import FileValidator
 from .file_manager import temp_file_manager
 from .logging_config import setup_logging
+from .request_logger import RequestLogger  # Новый импорт
 
 
 class WhisperServiceAPI:
@@ -63,6 +64,11 @@ class WhisperServiceAPI:
 
         # Настройка CORS с явным разрешением всех методов, заголовков и источников
         CORS(self.app)
+
+        # Инициализация логирования запросов
+        request_logging_config = self.config.get("request_logging", {})
+        RequestLogger(self.app, request_logging_config)
+        self.logger.info("Логирование запросов активировано")
 
         # Регистрация маршрутов
         Routes(self.app, self.transcriber, self.config, self.file_validator)

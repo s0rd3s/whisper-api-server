@@ -23,9 +23,16 @@ def setup_logging(log_level=logging.INFO, log_file=None):
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
     
-    # Создаем форматтер
-    formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    # Создаем улучшенный форматтер с поддержкой дополнительных полей
+    class CustomFormatter(logging.Formatter):
+        def format(self, record):
+            # Добавляем поле type если оно отсутствует
+            if not hasattr(record, 'type'):
+                record.type = 'general'
+            return super().format(record)
+    
+    formatter = CustomFormatter(
+        '%(asctime)s - %(name)s - %(levelname)s - [%(type)s] %(message)s'
     )
     
     # Добавляем обработчик для вывода в консоль
@@ -52,5 +59,6 @@ def setup_logging(log_level=logging.INFO, log_file=None):
     
     # Устанавливаем уровень логирования для логгеров в других модулях
     logging.getLogger('app').setLevel(log_level)
+    logging.getLogger('app.request').setLevel(log_level)
     
     return root_logger

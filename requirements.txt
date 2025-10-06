@@ -13,8 +13,7 @@ flash_attn @ https://github.com/kingbri1/flash-attention/releases/download/v2.7.
 Flask==3.1.0
 flask-cors==4.0.0
 waitress==3.0.0
-# ffmpeg-python удален, используем встроенную библиотеку wave
-scipy==1.13.1  # Для ресемплинга аудио
+scipy==1.13.1
 transformers==4.49.0
 accelerate==1.4.0
 python-magic==0.4.27
