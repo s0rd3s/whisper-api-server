@@ -100,7 +100,11 @@ class TranscriptionService:
             file.save(temp_file_path)
 
             # Определяем длительность аудиофайла
-            duration = AudioUtils.get_audio_duration(temp_file_path)
+            try:
+                duration = AudioUtils.get_audio_duration(temp_file_path)
+            except Exception as e:
+                logger.error(f"Ошибка при определении длительности файла: {e}")
+                return {"error": f"Не удалось определить длительность аудиофайла: {e}"}, 500
 
             # Для файлов из внешних источников (URL, base64), закрываем их и выполняем очистку
             if hasattr(source, 'cleanup'):
