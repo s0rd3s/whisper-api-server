@@ -26,6 +26,7 @@ Contains the `AudioProcessor` class for preprocessing audio files before transcr
 - Converting to WAV with a 16 kHz sample rate.
 - Normalizing volume level (with configurable `norm_level` parameters).
 - Applying compression/expansion (with configurable `compand_params` parameters).
+- Speeding up audio playback for faster recognition (with configurable `audio_speed_factor` parameter).
 - Adding silence at the beginning of the recording.
 - Cleaning up temporary files.
 
