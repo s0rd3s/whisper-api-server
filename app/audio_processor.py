@@ -7,15 +7,23 @@
 
 import os
 import subprocess
-import tempfile
 import uuid
 from typing import Dict, Tuple
 
-# Импорт классов и функций из других модулей
+from .file_manager import temp_file_manager
+from .context_managers import open_file
 from .utils import logger
 
+
 class AudioProcessor:
-    """Класс для предобработки аудиофайлов перед распознаванием."""
+    """
+    Класс для предобработки аудиофайлов перед распознаванием.
+    
+    Attributes:
+        config (Dict): Словарь с параметрами конфигурации.
+        norm_level (str): Уровень нормализации аудио.
+        compand_params (str): Параметры компрессора аудио.
+    """
     
     def __init__(self, config: Dict):
         """
@@ -37,8 +45,10 @@ class AudioProcessor:
             
         Returns:
             Путь к сконвертированному WAV-файлу.
+            
+        Raises:
+            subprocess.CalledProcessError: Если произошла ошибка при конвертации.
         """
-
         audio_rate = self.config["audio_rate"]
 
         # Проверка расширения файла
@@ -54,8 +64,7 @@ class AudioProcessor:
                 # Продолжаем конвертацию, чтобы быть уверенными в формате
 
         # Создаем временный файл для WAV
-        temp_dir = tempfile.mkdtemp()
-        output_path = os.path.join(temp_dir, f"{uuid.uuid4()}.wav")
+        output_path, _ = temp_file_manager.create_temp_file(".wav")
         
         # Команда для конвертации
         cmd = [
@@ -87,10 +96,12 @@ class AudioProcessor:
             
         Returns:
             Путь к нормализованному WAV-файлу.
+            
+        Raises:
+            subprocess.CalledProcessError: Если произошла ошибка при нормализации.
         """
         # Создаем временный файл для нормализованного аудио
-        temp_dir = tempfile.mkdtemp()
-        output_path = os.path.join(temp_dir, f"{uuid.uuid4()}_normalized.wav")
+        output_path, _ = temp_file_manager.create_temp_file("_normalized.wav")
         
         # Команда для нормализации аудио с помощью sox
         cmd = [
@@ -120,10 +131,12 @@ class AudioProcessor:
             
         Returns:
             Путь к аудиофайлу с добавленной тишиной.
+            
+        Raises:
+            subprocess.CalledProcessError: Если произошла ошибка при добавлении тишины.
         """
         # Создаем временный файл
-        temp_dir = tempfile.mkdtemp()
-        output_path = os.path.join(temp_dir, f"{uuid.uuid4()}_silence.wav")
+        output_path, _ = temp_file_manager.create_temp_file("_silence.wav")
         
         # Команда для добавления тишины в начало файла
         cmd = [
@@ -143,27 +156,6 @@ class AudioProcessor:
             logger.error(f"Ошибка при добавлении тишины: {e.stderr.decode()}")
             raise
     
-    def cleanup_temp_files(self, file_paths: list):
-        """
-        Удаление временных файлов и директорий.
-        
-        Args:
-            file_paths: Список путей к временным файлам.
-        """
-        for path in file_paths:
-            try:
-                if os.path.exists(path):
-                    os.remove(path)
-                    logger.debug(f"Удален временный файл: {path}")
-                    
-                    # Попытка удалить директорию, если она пуста
-                    temp_dir = os.path.dirname(path)
-                    if os.path.exists(temp_dir) and not os.listdir(temp_dir):
-                        os.rmdir(temp_dir)
-                        logger.debug(f"Удалена временная директория: {temp_dir}")
-            except Exception as e:
-                logger.warning(f"Не удалось очистить временный файл {path}: {e}")
-    
     def process_audio(self, input_path: str) -> Tuple[str, list]:
         """
         Полная обработка аудиофайла: конвертация, нормализация и добавление тишины.
@@ -173,6 +165,9 @@ class AudioProcessor:
             
         Returns:
             Кортеж: (путь к обработанному файлу, список временных файлов для удаления)
+            
+        Raises:
+            Exception: Если произошла ошибка при обработке аудио.
         """
         temp_files = []
         
@@ -194,5 +189,5 @@ class AudioProcessor:
         
         except Exception as e:
             logger.error(f"Ошибка при обработке аудио {input_path}: {e}")
-            self.cleanup_temp_files(temp_files)
+            temp_file_manager.cleanup_temp_files(temp_files)
             raise

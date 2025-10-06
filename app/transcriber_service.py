@@ -13,10 +13,19 @@ from typing import Dict, Tuple
 from .utils import logger
 from .history_logger import HistoryLogger
 from .audio_sources import AudioSource
+from .validators import FileValidator, ValidationError
 
 
 class TranscriptionService:
-    """Сервис для обработки и транскрибации аудиофайлов."""
+    """
+    Сервис для обработки и транскрибации аудиофайлов.
+    
+    Attributes:
+        transcriber: Экземпляр транскрайбера.
+        config (Dict): Словарь с конфигурацией.
+        max_file_size_mb (int): Максимальный размер файла в МБ.
+        history (HistoryLogger): Объект журналирования.
+    """
 
     def __init__(self, transcriber, config: Dict):
         """
@@ -28,7 +37,7 @@ class TranscriptionService:
         """
         self.transcriber = transcriber
         self.config = config
-        self.max_file_size_mb = self.config.get("max_file_size", 100)  # Default 100MB
+        self.max_file_size_mb = self.config.get("file_validation", {}).get("max_file_size_mb", 100)
 
         # Объект журналирования
         self.history = HistoryLogger(config)
@@ -51,13 +60,14 @@ class TranscriptionService:
             logger.error(f"Ошибка при определении длительности файла: {e}")
             return 0.0
 
-    def transcribe_from_source(self, source: AudioSource, params: Dict = None) -> Tuple[Dict, int]:
+    def transcribe_from_source(self, source: AudioSource, params: Dict = None, file_validator: FileValidator = None) -> Tuple[Dict, int]:
         """
         Транскрибирует аудиофайл из указанного источника.
 
         Args:
             source: Источник аудиофайла.
             params: Дополнительные параметры для транскрибации.
+            file_validator: Валидатор файлов.
 
         Returns:
             Кортеж (JSON-ответ, HTTP-код).
@@ -67,10 +77,21 @@ class TranscriptionService:
 
         # Обрабатываем ошибки получения файла
         if error:
+            logger.warning(f"Ошибка получения файла из источника: {error}")
             return {"error": error}, 400
 
         if not file:
+            logger.warning("Не удалось получить аудиофайл из источника")
             return {"error": "Failed to get audio file"}, 400
+        
+        # Валидация файла, если предоставлен валидатор
+        if file_validator:
+            try:
+                file_validator.validate_file(file, filename)
+            except ValidationError as e:
+                # Логирование ошибки валидации
+                logger.warning(f"Ошибка валидации файла '{filename}': {str(e)}")
+                return {"error": str(e)}, 400
 
         # Извлекаем параметры из запроса, если они есть
         params = params or {}
@@ -89,58 +110,52 @@ class TranscriptionService:
         self.transcriber.return_timestamps = return_timestamps
 
         # Сохраняем файл во временный файл
-        temp_dir = tempfile.mkdtemp()
-        temp_file_path = os.path.join(temp_dir, str(uuid.uuid4()) + "_" + os.path.basename(filename))
-        file.save(temp_file_path)
+        from .file_manager import temp_file_manager
+        with temp_file_manager.temp_file() as temp_file_path:
+            file.save(temp_file_path)
 
-        # Определяем длительность аудиофайла
-        duration = self.get_audio_duration(temp_file_path)
+            # Определяем длительность аудиофайла
+            duration = self.get_audio_duration(temp_file_path)
 
-        # Для файлов из внешних источников (URL, base64), закрываем их и выполняем очистку
-        if hasattr(source, 'cleanup'):
-            file.file.close()  # Закрываем файловый объект
-            source.cleanup()  # Очищаем временные файлы источника
+            # Для файлов из внешних источников (URL, base64), закрываем их и выполняем очистку
+            if hasattr(source, 'cleanup'):
+                file.file.close()  # Закрываем файловый объект
+                source.cleanup()  # Очищаем временные файлы источника
 
-        try:
-            start_time = time.time()
-            result = self.transcriber.process_file(temp_file_path)
-            processing_time = time.time() - start_time
+            try:
+                start_time = time.time()
+                result = self.transcriber.process_file(temp_file_path)
+                processing_time = time.time() - start_time
 
-            # Формируем ответ в зависимости от return_timestamps
-            if return_timestamps:
-                response = {
-                    "segments": result.get("segments", []),
-                    "text": result.get("text", ""),
-                    "processing_time": processing_time,
-                    "response_size_bytes": len(str(result).encode('utf-8')),
-                    "duration_seconds": duration,
-                    "model": os.path.basename(self.config["model_path"])
-                }
-            else:
-                # Если не запрашивались временные метки, result - это строка
-                response = {
-                    "text": result,
-                    "processing_time": processing_time,
-                    "response_size_bytes": len(str(result).encode('utf-8')),
-                    "duration_seconds": duration,
-                    "model": os.path.basename(self.config["model_path"])
-                }
+                # Формируем ответ в зависимости от return_timestamps
+                if return_timestamps:
+                    response = {
+                        "segments": result.get("segments", []),
+                        "text": result.get("text", ""),
+                        "processing_time": processing_time,
+                        "response_size_bytes": len(str(result).encode('utf-8')),
+                        "duration_seconds": duration,
+                        "model": os.path.basename(self.config["model_path"])
+                    }
+                else:
+                    # Если не запрашивались временные метки, result - это строка
+                    response = {
+                        "text": result,
+                        "processing_time": processing_time,
+                        "response_size_bytes": len(str(result).encode('utf-8')),
+                        "duration_seconds": duration,
+                        "model": os.path.basename(self.config["model_path"])
+                    }
 
-            # Журналирование результата
-            self.history.save(response, filename)
+                # Журналирование результата
+                self.history.save(response, filename)
 
-            return response, 200
+                return response, 200
 
-        except Exception as e:
-            logger.error(f"Ошибка при транскрибации: {e}")
-            return {"error": str(e)}, 500
+            except Exception as e:
+                logger.error(f"Ошибка при транскрибации: {e}")
+                return {"error": str(e)}, 500
 
-        finally:
-            # Восстанавливаем оригинальное значение return_timestamps
-            self.transcriber.return_timestamps = original_return_timestamps
-
-            # Очистка временных файлов
-            if os.path.exists(temp_file_path):
-                os.remove(temp_file_path)
-            if os.path.exists(temp_dir):
-                os.rmdir(temp_dir)
+            finally:
+                # Восстанавливаем оригинальное значение return_timestamps
+                self.transcriber.return_timestamps = original_return_timestamps

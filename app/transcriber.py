@@ -1,5 +1,5 @@
 """
-Модуль transcribe.py содержит класс WhisperTranscriber, который использует модель Whisper от 
+Модуль transcriber.py содержит класс WhisperTranscriber, который использует модель Whisper от 
 OpenAI для транскрибации аудиофайлов в текст. Класс включает в себя методы для загрузки модели, 
 обработки аудио (с использованием класса AudioProcessor), и выполнения транскрибации. 
 Обрабатывает выбор устройства (CPU, CUDA, MPS) для выполнения вычислений и обеспечивает 
@@ -19,11 +19,31 @@ from transformers import (
 )
 
 from .audio_processor import AudioProcessor
+from .file_manager import temp_file_manager
 from .utils import logger
 
-class WhisperTranscriber:
-    """Класс для распознавания речи с помощью модели Whisper."""
 
+class WhisperTranscriber:
+    """
+    Класс для распознавания речи с помощью модели Whisper.
+    
+    Attributes:
+        config (Dict): Словарь с параметрами конфигурации.
+        model_path (str): Путь к модели Whisper.
+        language (str): Язык распознавания.
+        chunk_length_s (int): Длина аудиочанка в секундах.
+        batch_size (int): Размер пакета для обработки.
+        max_new_tokens (int): Максимальное количество новых токенов для генерации.
+        return_timestamps (bool): Флаг возврата временных меток.
+        temperature (float): Параметр температуры для генерации.
+        torch_dtype (torch.dtype): Оптимальный тип данных для тензоров.
+        audio_processor (AudioProcessor): Объект для обработки аудио.
+        device (torch.device): Устройство для вычислений.
+        model (WhisperForConditionalGeneration): Загруженная модель Whisper.
+        processor (WhisperProcessor): Процессор для модели Whisper.
+        asr_pipeline (pipeline): Пайплайн для автоматического распознавания речи.
+    """
+    
     def __init__(self, config: Dict):
         """
         Инициализация транскрайбера.
@@ -53,7 +73,12 @@ class WhisperTranscriber:
         self._load_model()
 
     def _get_device(self) -> torch.device:
-        """Определение доступного устройства для вычислений."""
+        """
+        Определение доступного устройства для вычислений.
+        
+        Returns:
+            Объект устройства PyTorch.
+        """
         if torch.cuda.is_available():
             # Проверяем, доступна ли GPU с индексом 1
             if torch.cuda.device_count() > 1:
@@ -71,8 +96,13 @@ class WhisperTranscriber:
             logger.info("Используется CPU для вычислений")
             return torch.device("cpu")
 
-    def _load_model(self):
-        """Загрузка модели и процессора."""
+    def _load_model(self) -> None:
+        """
+        Загрузка модели и процессора.
+        
+        Raises:
+            Exception: Если не удалось загрузить модель.
+        """
         logger.info(f"Загрузка модели из {self.model_path}")
 
         try:
@@ -127,7 +157,10 @@ class WhisperTranscriber:
             file_path: Путь к аудиофайлу.
 
         Returns:
-            Tuple с массивом numpy и частотой дискретизации.
+            Кортеж (массив numpy, частота дискретизации).
+            
+        Raises:
+            Exception: Если не удалось загрузить аудиофайл.
         """
         try:
             audio_array, sampling_rate = librosa.load(file_path, sr=16000)
@@ -236,4 +269,4 @@ class WhisperTranscriber:
 
         finally:
             # Очистка временных файлов
-            self.audio_processor.cleanup_temp_files(temp_files)
+            temp_file_manager.cleanup_temp_files(temp_files)
