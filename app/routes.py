@@ -129,13 +129,17 @@ class Routes:
                     "details": f"Model '{model_id}' does not exist"
                 }), 404
 
+        def _handle_transcription_request():
+            """Общая функция для обработки запросов транскрибации."""
+            source = UploadedFileSource(request.files, self.config.get("file_validation", {}).get("max_file_size_mb", 100))
+            response, status_code = self.transcription_service.transcribe_from_source(source, request.form, self.file_validator)
+            return jsonify(response), status_code
+
         @self.app.route('/v1/audio/transcriptions', methods=['POST'])
         @log_invalid_file_request
         def openai_transcribe_endpoint():
             """Эндпоинт для транскрибации аудиофайла (multipart-форма)."""
-            source = UploadedFileSource(request.files, self.config.get("file_validation", {}).get("max_file_size_mb", 100))
-            response, status_code = self.transcription_service.transcribe_from_source(source, request.form, self.file_validator)
-            return jsonify(response), status_code
+            return _handle_transcription_request()
 
         @self.app.route('/v1/audio/transcriptions/url', methods=['POST'])
         @log_invalid_file_request
@@ -181,9 +185,7 @@ class Routes:
         @log_invalid_file_request
         def transcribe_multipart():
             """Эндпоинт для транскрибации аудиофайла, загруженного через форму."""
-            source = UploadedFileSource(request.files, self.config.get("file_validation", {}).get("max_file_size_mb", 100))
-            response, status_code = self.transcription_service.transcribe_from_source(source, request.form, self.file_validator)
-            return jsonify(response), status_code
+            return _handle_transcription_request()
         
         @self.app.route('/v1/audio/transcriptions/async', methods=['POST'])
         @log_invalid_file_request

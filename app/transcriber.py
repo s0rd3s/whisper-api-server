@@ -7,9 +7,9 @@ OpenAI для транскрибации аудиофайлов в текст. �
 """
 
 import time
+import traceback
 from typing import Dict, Tuple, Union
 
-import librosa
 import numpy as np
 import torch
 from transformers import (
@@ -19,6 +19,7 @@ from transformers import (
 )
 
 from .audio_processor import AudioProcessor
+from .audio_utils import AudioUtils
 from .file_manager import temp_file_manager
 from .utils import logger
 
@@ -149,25 +150,7 @@ class WhisperTranscriber:
 
         logger.info("Модель успешно загружена и готова к использованию")
 
-    def _load_audio(self, file_path: str) -> Tuple[np.ndarray, int]:
-        """
-        Загрузка аудиофайла с использованием librosa.
-
-        Args:
-            file_path: Путь к аудиофайлу.
-
-        Returns:
-            Кортеж (массив numpy, частота дискретизации).
-            
-        Raises:
-            Exception: Если не удалось загрузить аудиофайл.
-        """
-        try:
-            audio_array, sampling_rate = librosa.load(file_path, sr=16000)
-            return audio_array, sampling_rate
-        except Exception as e:
-            logger.error(f"Ошибка при загрузке аудио {file_path}: {e}")
-            raise
+    # Метод _load_audio удален, так как его функциональность перенесена в AudioUtils
 
     def transcribe(self, audio_path: str) -> Union[str, Dict]:
         """
@@ -182,61 +165,72 @@ class WhisperTranscriber:
             - Если return_timestamps=True: словарь с ключами "segments" (список словарей с ключами start_time_ms, end_time_ms, text) и "text" (полный текст)
         """
         logger.info(f"Начало транскрибации файла: {audio_path}")
-
-        # Загрузка аудио в формате numpy array
-        audio_array, sampling_rate = self._load_audio(audio_path)
-
-        # Транскрибация с корректным форматом данных
-        result = self.asr_pipeline(
-            {"raw": audio_array, "sampling_rate": sampling_rate}, 
-            generate_kwargs={"language": self.language, "max_new_tokens": self.max_new_tokens, "temperature": self.temperature},
-            return_timestamps=self.return_timestamps
-        )
-
-        # Если временные метки не запрошены, возвращаем только текст
-        if not self.return_timestamps:
-            transcribed_text = result.get("text", "")
-            logger.info(f"Транскрибация завершена: получено {len(transcribed_text)} символов текста")
-            return transcribed_text
         
-        # Если временные метки запрошены, обрабатываем и форматируем результат
-        segments = []
-        full_text = result.get("text", "")
-        
-        if "chunks" in result:
-            # Для новых версий модели Whisper
-            for chunk in result["chunks"]:
-                start_time = chunk.get("timestamp", [0, 0])[0]
-                end_time = chunk.get("timestamp", [0, 0])[1]
-                text = chunk.get("text", "").strip()
-                
-                segments.append({
-                    "start_time_ms": int(start_time * 1000),
-                    "end_time_ms": int(end_time * 1000),
-                    "text": text
-                })
-        elif hasattr(result, "get") and "segments" in result:
-            # Для старых версий модели Whisper
-            for segment in result["segments"]:
-                start_time = segment.get("start", 0)
-                end_time = segment.get("end", 0)
-                text = segment.get("text", "").strip()
-                
-                segments.append({
-                    "start_time_ms": int(start_time * 1000),
-                    "end_time_ms": int(end_time * 1000),
-                    "text": text
-                })
-        else:
-            logger.warning("Временные метки запрошены, но не найдены в результате транскрибации")
-        
-        logger.info(f"Транскрибация с временными метками завершена: получено {len(segments)} сегментов")
-        
-        # Возвращаем словарь с сегментами и полным текстом
-        return {
-            "segments": segments,
-            "text": full_text
-        }
+        try:
+            # Загрузка аудио в формате numpy array
+            audio_array, sampling_rate = AudioUtils.load_audio(audio_path, sr=16000)
+            
+            # Транскрибация с корректным форматом данных
+            result = self.asr_pipeline(
+                {"raw": audio_array, "sampling_rate": sampling_rate}, 
+                generate_kwargs={
+                    "language": self.language, 
+                    "max_new_tokens": self.max_new_tokens, 
+                    "temperature": self.temperature
+                },
+                return_timestamps=self.return_timestamps
+            )
+            
+            # Если временные метки не запрошены, возвращаем только текст
+            if not self.return_timestamps:
+                transcribed_text = result.get("text", "")
+                logger.info(f"Транскрибация завершена: получено {len(transcribed_text)} символов текста")
+                return transcribed_text
+            
+            # Если временные метки запрошены, обрабатываем и форматируем результат
+            segments = []
+            full_text = result.get("text", "")
+            
+            if "chunks" in result:
+                # Для новых версий модели Whisper
+                for chunk in result["chunks"]:
+                    start_time = chunk.get("timestamp", [0, 0])[0]
+                    end_time = chunk.get("timestamp", [0, 0])[1]
+                    text = chunk.get("text", "").strip()
+                    
+                    segments.append({
+                        "start_time_ms": int(start_time * 1000),
+                        "end_time_ms": int(end_time * 1000),
+                        "text": text
+                    })
+            elif hasattr(result, "get") and "segments" in result:
+                # Для старых версий модели Whisper
+                for segment in result["segments"]:
+                    start_time = segment.get("start", 0)
+                    end_time = segment.get("end", 0)
+                    text = segment.get("text", "").strip()
+                    
+                    segments.append({
+                        "start_time_ms": int(start_time * 1000),
+                        "end_time_ms": int(end_time * 1000),
+                        "text": text
+                    })
+            else:
+                logger.warning("Временные метки запрошены, но не найдены в результате транскрибации")
+            
+            logger.info(f"Транскрибация с временными метками завершена: получено {len(segments)} сегментов")
+            
+            # Возвращаем словарь с сегментами и полным текстом
+            return {
+                "segments": segments,
+                "text": full_text
+            }
+            
+        except Exception as e:
+            logger.error(f"Ошибка в процессе транскрибации аудиофайла '{audio_path}': {str(e)}")
+            logger.error(f"Тип исключения: {type(e).__name__}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
 
     def process_file(self, input_path: str) -> Union[str, Dict]:
         """
@@ -252,21 +246,28 @@ class WhisperTranscriber:
         """
         start_time = time.time()
         logger.info(f"Начало обработки файла: {input_path}")
-
+        
         temp_files = []
-
+        
         try:
             # Обработка аудио (конвертация, нормализация, добавление тишины)
             processed_path, temp_files = self.audio_processor.process_audio(input_path)
-
+            
             # Транскрибация
             result = self.transcribe(processed_path)
-
+            
             elapsed_time = time.time() - start_time
             logger.info(f"Обработка и транскрибация завершены за {elapsed_time:.2f} секунд")
-
+            
             return result
-
+            
+        except Exception as e:
+            elapsed_time = time.time() - start_time
+            logger.error(f"Ошибка при обработке файла '{input_path}' через {elapsed_time:.2f} секунд: {str(e)}")
+            logger.error(f"Тип исключения: {type(e).__name__}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
+            
         finally:
             # Очистка временных файлов
             temp_file_manager.cleanup_temp_files(temp_files)

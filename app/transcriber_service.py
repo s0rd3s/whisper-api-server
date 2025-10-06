@@ -7,10 +7,11 @@ import os
 import uuid
 import tempfile
 import time
-import librosa
+import traceback
 from typing import Dict, Tuple
 
 from .utils import logger
+from .audio_utils import AudioUtils
 from .history_logger import HistoryLogger
 from .audio_sources import AudioSource
 from .validators import FileValidator, ValidationError
@@ -42,23 +43,7 @@ class TranscriptionService:
         # Объект журналирования
         self.history = HistoryLogger(config)
 
-    def get_audio_duration(self, file_path: str) -> float:
-        """
-        Определяет длительность аудиофайла в секундах.
-
-        Args:
-            file_path: Путь к аудиофайлу.
-
-        Returns:
-            Длительность в секундах.
-        """
-        try:
-            y, sr = librosa.load(file_path, sr=None)
-            duration = librosa.get_duration(y=y, sr=sr)
-            return duration
-        except Exception as e:
-            logger.error(f"Ошибка при определении длительности файла: {e}")
-            return 0.0
+    # Метод get_audio_duration удален, так как его функциональность перенесена в AudioUtils
 
     def transcribe_from_source(self, source: AudioSource, params: Dict = None, file_validator: FileValidator = None) -> Tuple[Dict, int]:
         """
@@ -115,7 +100,7 @@ class TranscriptionService:
             file.save(temp_file_path)
 
             # Определяем длительность аудиофайла
-            duration = self.get_audio_duration(temp_file_path)
+            duration = AudioUtils.get_audio_duration(temp_file_path)
 
             # Для файлов из внешних источников (URL, base64), закрываем их и выполняем очистку
             if hasattr(source, 'cleanup'):
@@ -153,7 +138,9 @@ class TranscriptionService:
                 return response, 200
 
             except Exception as e:
-                logger.error(f"Ошибка при транскрибации: {e}")
+                logger.error(f"Ошибка при транскрибации файла '{filename}': {str(e)}")
+                logger.error(f"Тип исключения: {type(e).__name__}")
+                logger.error(f"Traceback: {traceback.format_exc()}")
                 return {"error": str(e)}, 500
 
             finally:

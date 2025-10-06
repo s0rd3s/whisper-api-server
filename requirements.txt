@@ -13,7 +13,7 @@ flash_attn @ https://github.com/kingbri1/flash-attention/releases/download/v2.7.
 Flask==3.1.0
 flask-cors==4.0.0
 waitress==3.0.0
-librosa==0.10.1
+librosa==0.11.0  # Обновлено с 0.10.1 до 0.11.0
 transformers==4.49.0
 accelerate==1.4.0
 python-magic==0.4.27
