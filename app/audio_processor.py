@@ -48,45 +48,53 @@ class AudioProcessor:
             Путь к сконвертированному WAV-файлу.
             
         Raises:
-            subprocess.CalledProcessError: Если произошла ошибка при конвертации.
+            RuntimeError: Если произошла ошибка при конвертации или WAV файл недействителен.
         """
-        audio_rate = self.config["audio_rate"]
+        audio_rate = self.config.get("audio_rate", 16000)  # Default to 16kHz for NeMo
 
         # Проверка расширения файла
         if input_path.lower().endswith('.wav'):
-            # Проверяем, нужно ли преобразовывать WAV-файл (например, если частота не 16 кГц)
             try:
-                info = subprocess.check_output(['soxi', input_path]).decode()
-                if f'{audio_rate} Hz' in info:
-                    logger.info(f"Файл {input_path} уже в формате WAV с частотой {audio_rate} Гц")
+                info = subprocess.check_output(['soxi', input_path], stderr=subprocess.STDOUT).decode()
+                if f'{audio_rate} Hz' in info and 'Channels       : 1' in info:
+                    logger.info(f"Файл {input_path} уже в формате WAV с частотой {audio_rate} Гц и моно")
                     return input_path
-            except subprocess.CalledProcessError:
-                logger.warning(f"Не удалось получить информацию о WAV-файле {input_path}")
-                # Продолжаем конвертацию, чтобы быть уверенными в формате
+            except subprocess.CalledProcessError as e:
+                logger.warning(f"Не удалось получить информацию о WAV-файле {input_path}: {e.output.decode()}")
+                # Продолжаем конвертацию для обеспечения правильного формата
 
         # Создаем временный файл для WAV
         output_path, _ = temp_file_manager.create_temp_file(".wav")
         
-        # Команда для конвертации
+        # Команда для конвертации с явным указанием PCM кодека
         cmd = [
             "ffmpeg",
             "-hide_banner",
-            "-loglevel", "warning",
+            "-loglevel", "error",
+            "-y",  # Перезаписывать выходной файл
             "-i", input_path,
-            "-ar", f"{audio_rate}",
+            "-ar", str(audio_rate),
             "-ac", "1",  # Монофонический звук
+            "-c:a", "pcm_s16le",  # PCM 16-bit little-endian для WAV
             output_path
         ]
         
         logger.info(f"Конвертация в WAV: {' '.join(cmd)}")
         
         try:
-            subprocess.run(cmd, check=True, capture_output=True)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+                raise RuntimeError("Generated WAV file is invalid or empty")
+            # Валидация WAV с помощью soxi
+            subprocess.run(['soxi', output_path], check=True, capture_output=True)
             logger.info(f"Файл конвертирован в WAV: {output_path}")
             return output_path
         except subprocess.CalledProcessError as e:
-            logger.error(f"Ошибка при конвертации в WAV: {e.stderr.decode()}")
-            raise
+            logger.error(f"Ошибка при конвертации в WAV: {e.stderr}")
+            raise RuntimeError(f"Failed to convert to WAV: {e.stderr}")
+        except Exception as e:
+            logger.error(f"Ошибка при валидации WAV файла {output_path}: {str(e)}")
+            raise RuntimeError(f"Invalid WAV file generated: {str(e)}")
     
     def normalize_audio(self, input_path: str) -> str:
         """
@@ -99,12 +107,10 @@ class AudioProcessor:
             Путь к нормализованному WAV-файлу.
             
         Raises:
-            subprocess.CalledProcessError: Если произошла ошибка при нормализации.
+            RuntimeError: Если произошла ошибка при нормализации.
         """
-        # Создаем временный файл для нормализованного аудио
         output_path, _ = temp_file_manager.create_temp_file("_normalized.wav")
         
-        # Команда для нормализации аудио с помощью sox
         cmd = [
             "sox", 
             input_path, 
@@ -116,12 +122,12 @@ class AudioProcessor:
         logger.info(f"Нормализация аудио: {' '.join(cmd)}")
         
         try:
-            subprocess.run(cmd, check=True, capture_output=True)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             logger.info(f"Аудио нормализовано: {output_path}")
             return output_path
         except subprocess.CalledProcessError as e:
-            logger.error(f"Ошибка при нормализации аудио: {e.stderr.decode()}")
-            raise
+            logger.error(f"Ошибка при нормализации аудио: {e.stderr}")
+            raise RuntimeError(f"Failed to normalize audio: {e.stderr}")
     
     def speed_up_audio(self, input_path: str) -> str:
         """
@@ -134,39 +140,38 @@ class AudioProcessor:
             Путь к ускоренному WAV-файлу.
             
         Raises:
-            subprocess.CalledProcessError: Если произошла ошибка при ускорении.
+            RuntimeError: Если произошла ошибка при ускорении.
         """
-        # Если ускорение не требуется (коэффициент = 1.0), возвращаем исходный файл
         if float(self.audio_speed_factor) == 1.0:
             logger.info(f"Ускорение не требуется (коэффициент = {self.audio_speed_factor})")
             return input_path
         
-        # Создаем временный файл для ускоренного аудио
         output_path, _ = temp_file_manager.create_temp_file("_speedup.wav")
         
-        # Команда для ускорения аудио с помощью FFmpeg
         cmd = [
             "ffmpeg",
             "-hide_banner",
-            "-loglevel", "warning",
+            "-loglevel", "error",
+            "-y",
             "-i", input_path,
             "-filter:a", f"atempo={self.audio_speed_factor}",
+            "-c:a", "pcm_s16le",
             output_path
         ]
         
         logger.info(f"Ускорение аудио в {self.audio_speed_factor}x: {' '.join(cmd)}")
         
         try:
-            subprocess.run(cmd, check=True, capture_output=True)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             logger.info(f"Аудио ускорено: {output_path}")
             return output_path
         except subprocess.CalledProcessError as e:
-            logger.error(f"Ошибка при ускорении аудио: {e.stderr.decode()}")
-            raise
+            logger.error(f"Ошибка при ускорении аудио: {e.stderr}")
+            raise RuntimeError(f"Failed to speed up audio: {e.stderr}")
     
     def add_silence(self, input_path: str) -> str:
         """
-        Добавляет тишину в начало аудиофайла.
+        Добавляет тишину в начало и конец аудиофайла.
         
         Args:
             input_path: Путь к аудиофайлу.
@@ -175,28 +180,26 @@ class AudioProcessor:
             Путь к аудиофайлу с добавленной тишиной.
             
         Raises:
-            subprocess.CalledProcessError: Если произошла ошибка при добавлении тишины.
+            RuntimeError: Если произошла ошибка при добавлении тишины.
         """
-        # Создаем временный файл
         output_path, _ = temp_file_manager.create_temp_file("_silence.wav")
         
-        # Команда для добавления тишины в начало файла
         cmd = [
             "sox",
             input_path,
             output_path,
-            "pad", "2.0", "1.0"  # Добавление тишины в начале и в конце (секунды)
+            "pad", "2.0", "1.0"
         ]
         
         logger.info(f"Добавление тишины: {' '.join(cmd)}")
         
         try:
-            subprocess.run(cmd, check=True, capture_output=True)
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
             logger.info(f"Тишина добавлена: {output_path}")
             return output_path
         except subprocess.CalledProcessError as e:
-            logger.error(f"Ошибка при добавлении тишины: {e.stderr.decode()}")
-            raise
+            logger.error(f"Ошибка при добавлении тишины: {e.stderr}")
+            raise RuntimeError(f"Failed to add silence: {e.stderr}")
     
     def process_audio(self, input_path: str) -> Tuple[str, list]:
         """
@@ -209,23 +212,23 @@ class AudioProcessor:
             Кортеж: (путь к обработанному файлу, список временных файлов для удаления)
             
         Raises:
-            Exception: Если произошла ошибка при обработке аудио.
+            RuntimeError: Если произошла ошибка при обработке аудио.
         """
         temp_files = []
         
         try:
             # Конвертация в WAV
             wav_path = self.convert_to_wav(input_path)
-            if wav_path != input_path:  # Если был создан временный файл
+            if wav_path != input_path:
                 temp_files.append(wav_path)
             
             # Нормализация
             normalized_path = self.normalize_audio(wav_path)
             temp_files.append(normalized_path)
             
-            # УСКОРЕНИЕ ЗВУКА (НОВЫЙ ШАГ)
+            # Ускорение
             speedup_path = self.speed_up_audio(normalized_path)
-            if speedup_path != normalized_path:  # Если был создан временный файл
+            if speedup_path != normalized_path:
                 temp_files.append(speedup_path)
             
             # Добавление тишины

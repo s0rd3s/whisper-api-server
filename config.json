@@ -1,14 +1,14 @@
 {
     "service_port": 5042,
-    "model_path": "/home/text-generation/models/whisper/podlodka-turbo",
+    "model_path": "/home/user/models/whisper/podlodka-turbo",
     "language": "ru",
-    "enable_history": true,
+    "enable_history": false,
     "chunk_length_s": 28,
     "batch_size": 6,
     "max_new_tokens": 384,
     "temperature": 0.01,
-    "return_timestamps": false,
-    "audio_rate": 8000,
+    "return_timestamps": true,
+    "audio_rate": 16000,
     "norm_level": "-0.55",
     "compand_params": "0.3,1 -90,-90,-70,-50,-40,-15,0,0 -7 0 0.15",
     "audio_speed_factor": 1.0,
@@ -25,5 +25,26 @@
         "exclude_endpoints": ["/health", "/static"],
         "sensitive_headers": ["authorization", "cookie", "set-cookie", "proxy-authorization", "x-api-key"],
         "log_debug": true
+    },
+    "diarizer": {
+        "vad_model_name": "vad_multilingual_marblenet",
+        "speaker_embeddings_model_name": "nvidia/speakerverification_en_titanet_large",
+        "msdd_model_name": "diar_msdd_telephonic",
+        "clustering": {
+            "oracle_num_speakers": false
+        },
+        "out_dir": "outputs/diarizer",
+        "msdd_model": {
+            "parameters": {
+                "diar_window_length": 0.25,
+                "overlap_rate": 0.5,
+                "threshold": 0.5,
+                "use_speaker_model_from_ckpt": true
+            }
+        },
+        "max_speakers": 10,
+        "win_s": 3.0,
+        "step_s": 1.5,
+        "gap": 0.5
     }
 }
