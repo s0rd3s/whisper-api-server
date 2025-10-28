@@ -44,7 +44,7 @@ class TranscriptionService:
         self.max_file_size_mb = self.config.get("file_validation", {}).get("max_file_size_mb", 100)
         self.history = HistoryLogger(config)
         self.diarizer = Diarizer(config)
-        self.audio_processor = AudioProcessor(config)  # Initialize AudioProcessor
+        self.audio_processor = AudioProcessor(config)
 
     def transcribe_from_source(self, source: AudioSource, params: Dict = None, file_validator: FileValidator = None) -> Tuple[Dict, int]:
         """
@@ -197,37 +197,73 @@ class TranscriptionService:
             try:
                 start_time = time.time()
                 result = self.transcriber.process_file(wav_path)
-                segments = result.get("segments", [])
+                segments = sorted(result.get("segments", []), key=lambda x: x["start_time_ms"])  # Sort segments chronologically
                 full_text = result.get("text", "")
 
                 speaker_segments = self.diarizer.diarize(wav_path)
 
-                speaker_texts: Dict[str, list] = {str(seg['spk']): [] for seg in speaker_segments}  # Use spk as key (str for hashable)
+                speaker_texts: Dict[str, list] = {str(seg['spk']): [] for seg in speaker_segments}
+                unassigned_segments = []
+                overlap_threshold = self.config.get("diarizer", {}).get("overlap_threshold", 0.3)
+
+                # Assign segments based on overlap
                 for seg in segments:
                     seg_start = seg["start_time_ms"] / 1000.0
                     seg_end = seg["end_time_ms"] / 1000.0
                     text = seg["text"]
-                    assigned = False
+                    best_overlap = 0
+                    best_speaker = None
                     for speaker_seg in speaker_segments:
                         overlap = max(0, min(seg_end, speaker_seg["e"]) - max(seg_start, speaker_seg["s"]))
-                        if overlap > (seg_end - seg_start) * 0.5:
-                            speaker_texts[str(speaker_seg['spk'])].append(text)
-                            assigned = True
-                            break
-                    if not assigned:
+                        overlap_ratio = overlap / (seg_end - seg_start) if (seg_end - seg_start) > 0 else 0
+                        if overlap_ratio >= overlap_threshold and overlap_ratio > best_overlap:
+                            best_overlap = overlap_ratio
+                            best_speaker = speaker_seg['spk']
+                    if best_speaker is not None:
+                        speaker_texts[str(best_speaker)].append({"start": seg_start, "end": seg_end, "text": text})
+                        logger.debug(f"Assigned segment: {seg_start:.2f}-{seg_end:.2f}, text='{text}', to spk={best_speaker}, overlap={best_overlap:.2f}")
+                    else:
+                        unassigned_segments.append((seg_start, seg_end, text))
+                        logger.debug(f"Unassigned segment: {seg_start:.2f}-{seg_end:.2f}, text='{text}'")
+
+                # Fallback: Assign unassigned segments to nearest speaker
+                for seg_start, seg_end, text in unassigned_segments:
+                    min_distance = float('inf')
+                    closest_speaker = None
+                    for speaker_seg in speaker_segments:
+                        distance = min(abs(seg_start - speaker_seg["e"]), abs(seg_end - speaker_seg["s"]))
+                        if distance < min_distance and distance <= self.config.get("diarizer", {}).get("max_distance", 3.0):
+                            min_distance = distance
+                            closest_speaker = speaker_seg["spk"]
+                    if closest_speaker is not None:
+                        speaker_texts[str(closest_speaker)].append({"start": seg_start, "end": seg_end, "text": text})
+                        logger.debug(f"Assigned via proximity: {seg_start:.2f}-{seg_end:.2f}, text='{text}', to spk={closest_speaker}, distance={min_distance:.2f}")
+                    else:
                         if "Unknown" not in speaker_texts:
                             speaker_texts["Unknown"] = []
-                        speaker_texts["Unknown"].append(text)
+                        speaker_texts["Unknown"].append({"start": seg_start, "end": seg_end, "text": text})
+                        logger.debug(f"Assigned to Unknown: {seg_start:.2f}-{seg_end:.2f}, text='{text}'")
+
+                # Format speaker texts chronologically
+                formatted_speakers = {}
+                for speaker, texts in speaker_texts.items():
+                    # Sort texts by start time to ensure chronological order
+                    sorted_texts = sorted(texts, key=lambda x: x["start"])
+                    formatted_speakers[speaker] = {
+                        "text": " ".join(item["text"] for item in sorted_texts),
+                        "segments": sorted_texts
+                    }
 
                 processing_time = time.time() - start_time
                 response = {
-                    "speakers": {speaker: " ".join(texts) for speaker, texts in speaker_texts.items()},
+                    "speakers": {k: v["text"] for k, v in formatted_speakers.items()},
                     "full_transcript": full_text,
                     "segments": segments,
-                    "num_speakers": len(speaker_texts),
+                    "num_speakers": len(speaker_texts) - (1 if "Unknown" in speaker_texts else 0),
                     "processing_time": processing_time,
                     "duration_seconds": duration,
-                    "model": os.path.basename(self.config["model_path"])
+                    "model": os.path.basename(self.config["model_path"]),
+                    "detailed_segments": formatted_speakers
                 }
 
                 self.history.save(response, filename)
@@ -242,3 +278,4 @@ class TranscriptionService:
             finally:
                 self.transcriber.return_timestamps = original_return_timestamps
                 temp_file_manager.cleanup_temp_files(temp_files)
+

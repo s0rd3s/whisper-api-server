@@ -1,8 +1,8 @@
 {
     "service_port": 5042,
-    "model_path": "/home/user/models/whisper/podlodka-turbo",
+    "model_path": "/home/ansible/models/whisper/podlodka-turbo",
     "language": "ru",
-    "enable_history": false,
+    "enable_history": true,
     "chunk_length_s": 28,
     "batch_size": 6,
     "max_new_tokens": 384,
@@ -19,7 +19,7 @@
     },
     "allowed_directories": [],
     "version": "1.0.0",
-    "log_level": "INFO",
+    "log_level": "DEBUG",
     "log_file": "logs/whisper_api.log",
     "request_logging": {
         "exclude_endpoints": ["/health", "/static"],
@@ -27,24 +27,21 @@
         "log_debug": true
     },
     "diarizer": {
-        "vad_model_name": "vad_multilingual_marblenet",
-        "speaker_embeddings_model_name": "nvidia/speakerverification_en_titanet_large",
-        "msdd_model_name": "diar_msdd_telephonic",
-        "clustering": {
-            "oracle_num_speakers": false
-        },
-        "out_dir": "outputs/diarizer",
-        "msdd_model": {
-            "parameters": {
-                "diar_window_length": 0.25,
-                "overlap_rate": 0.5,
-                "threshold": 0.5,
-                "use_speaker_model_from_ckpt": true
+        "speaker_diarization_model_name": "pyannote/speaker-diarization-3.1",
+        "min_segment_duration": 0.5,
+        "gap": 0.7,
+        "pipeline_params": {
+            "segmentation": {
+                "min_duration_off": 0.7
+            },
+            "clustering": {
+                "method": "centroid",
+                "min_cluster_size": 5,
+                "threshold": 0.98
             }
         },
-        "max_speakers": 10,
-        "win_s": 3.0,
-        "step_s": 1.5,
-        "gap": 0.5
+        "overlap_threshold": 0.3,
+        "max_distance": 3.0
     }
 }
+

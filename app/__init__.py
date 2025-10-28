@@ -12,8 +12,7 @@ from .routes import Routes
 from .validators import FileValidator
 from .file_manager import temp_file_manager
 from .logging_config import setup_logging
-from .request_logger import RequestLogger  # Новый импорт
-
+from .request_logger import RequestLogger
 
 class WhisperServiceAPI:
     """
@@ -25,6 +24,7 @@ class WhisperServiceAPI:
         transcriber (WhisperTranscriber): Экземпляр транскрайбера.
         app (Flask): Flask-приложение.
         file_validator (FileValidator): Валидатор файлов.
+        logger (logging.Logger): Логгер для приложения.
     """
 
     def __init__(self, config_path: str):
@@ -34,16 +34,18 @@ class WhisperServiceAPI:
         Args:
             config_path: Путь к конфигурационному файлу.
         """
+        # Initialize logger first
+        self.logger = logging.getLogger('app')
+        # Set up a temporary basic logger in case config loading fails
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        
         # Загрузка конфигурации
         self.config = self._load_config(config_path)
 
-        # Настройка логирования
+        # Настройка логирования с параметрами из конфигурации
         log_level = getattr(logging, self.config.get("log_level", "INFO").upper())
         log_file = self.config.get("log_file", "logs/whisper_api.log")
         setup_logging(log_level=log_level, log_file=log_file)
-        
-        # Получаем логгер
-        self.logger = logging.getLogger('app')
         self.logger.info("Инициализация API сервиса")
 
         # Порт для сервиса
@@ -57,7 +59,7 @@ class WhisperServiceAPI:
 
         # Определение пути к директории static
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        static_folder_path = os.path.join(current_dir, 'static')
+        static_folder_path = os.path.join( current_dir, 'static')
         
         # Создание Flask-приложения с явным указанием пути к static
         self.app = Flask("whisper-service", static_folder=static_folder_path)
@@ -93,11 +95,15 @@ class WhisperServiceAPI:
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
+            self.logger.info(f"Конфигурация загружена из {config_path}")
             return config
         except FileNotFoundError as e:
             self.logger.error(f"Файл конфигурации не найден: {e}")
             raise
         except json.JSONDecodeError as e:
+            self.logger.error(f"Ошибка при загрузке конфигурации: {e}")
+            raise
+        except Exception as e:
             self.logger.error(f"Ошибка при загрузке конфигурации: {e}")
             raise
 
@@ -112,8 +118,6 @@ class WhisperServiceAPI:
             self.app, 
             host='0.0.0.0', 
             port=self.port, 
-            # Увеличиваем время, которое сервер будет ждать ответа от приложения,
-            # прежде чем разорвать соединение из-за отсутствия сетевой активности.
             channel_timeout=600  # 10 минут
         )
     
@@ -123,3 +127,4 @@ class WhisperServiceAPI:
         """
         self.logger.info("Очистка ресурсов перед завершением работы")
         temp_file_manager.cleanup_all()
+

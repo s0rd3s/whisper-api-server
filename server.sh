@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Имя окружения conda
-CONDA_ENV_NAME="whisper-api"
+CONDA_ENV_NAME="whisper-api-annotate"
 
 # Флаг обновления (по умолчанию false)
 UPDATE_ENV=false
